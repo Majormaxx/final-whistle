@@ -1,0 +1,28 @@
+# PRDs and internal docs — never push
+*prd*
+*PRD*
+*.prd.md
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+out/
+build/
+.next/
+
+# Foundry
+contracts/cache/
+contracts/out/
+contracts/broadcast/
+
+# Misc
+.DS_Store
+*.log
