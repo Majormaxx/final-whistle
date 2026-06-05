@@ -67,7 +67,9 @@ contract ResolverAgent is IAgentRequesterHandler {
         owner          = msg.sender;
         platform       = IAgentRequester(_platform);
         jsonApiAgentId = _jsonApiAgentId;
-        multisig       = _multisig;
+        multisig[0]    = _multisig[0];
+        multisig[1]    = _multisig[1];
+        multisig[2]    = _multisig[2];
     }
 
     // ── initiation ────────────────────────────────────────────────────────
@@ -170,6 +172,13 @@ contract ResolverAgent is IAgentRequesterHandler {
     }
 
     // ── admin ─────────────────────────────────────────────────────────────
+
+    // Lets the owner (keeper bot) close a market before initiating resolution.
+    // Needed because close() on markets restricts to resolver address or time expiry.
+    function closeMarket(address market) external {
+        require(msg.sender == owner, "only owner");
+        IMarket(market).close();
+    }
 
     function setJsonApiAgentId(uint256 id) external {
         require(msg.sender == owner, "only owner");

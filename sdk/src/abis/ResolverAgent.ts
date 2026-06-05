@@ -460,6 +460,13 @@ export const ResolverAgentAbi = [
   },
   {
     "type": "function",
+    "name": "closeMarket",
+    "inputs": [{ "name": "market", "type": "address", "internalType": "address" }],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "setJsonApiAgentId",
     "inputs": [
       {
