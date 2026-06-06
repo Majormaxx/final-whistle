@@ -2,6 +2,7 @@ import { readClient } from '@/lib/sdk'
 import { getTodayFixtures } from '@/lib/fixtures'
 import { MatchRow } from '@/components/MatchRow'
 import { FixtureRow } from '@/components/FixtureRow'
+import { Hero } from '@/components/Hero'
 import type { MatchMarketInfo } from '@final-whistle/sdk'
 import type { Fixture } from '@/lib/fixtures'
 import type { Address } from 'viem'
@@ -58,9 +59,11 @@ export default async function Home() {
 
   return (
     <div>
+      <Hero />
+
       <div className="mb-6">
-        <h1 className="text-xl font-bold text-white">Markets that settle themselves.</h1>
-        <p className="text-zinc-500 text-sm mt-0.5">Goal scored. Wallet paid. Same block.</p>
+        <h1 className="text-xl font-bold text-white">Today's matches</h1>
+        <p className="text-zinc-500 text-sm mt-0.5">Live markets settle on-chain when goals are scored.</p>
       </div>
 
       {rows.length === 0 ? (
