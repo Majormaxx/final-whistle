@@ -39,6 +39,7 @@ export class Keeper {
   private readonly account: ReturnType<typeof privateKeyToAccount>
   private readonly wallet:  ReturnType<typeof createWalletClient>
   private readonly public_: ReturnType<typeof createPublicClient>
+  private readonly fixtureApiUrl: string
   private state: KeeperState = {
     phase:         'SCHEDULED',
     lastGoalCount: 0,
@@ -47,7 +48,8 @@ export class Keeper {
     received:      0n,
   }
 
-  constructor() {
+  constructor(fixtureApiUrl: string) {
+    this.fixtureApiUrl = fixtureApiUrl
     this.account = privateKeyToAccount(config.privateKey)
     this.public_ = createPublicClient({ chain: somniaTestnet, transport: http(config.rpcUrl) })
     this.wallet  = createWalletClient({ chain: somniaTestnet, transport: http(config.rpcUrl), account: this.account })
@@ -188,7 +190,7 @@ export class Keeper {
       address:      config.resolverAddress,
       abi:          ResolverAgentAbi,
       functionName: 'initiateNextGoalResolution',
-      args:         [window.address, config.fixtureApiUrl, BigInt(window.goalsBefore)],
+      args:         [window.address, this.fixtureApiUrl, BigInt(window.goalsBefore)],
       value:        deposit * 2n,
     })
     await this.public_.waitForTransactionReceipt({ hash: resolveHash })
@@ -223,7 +225,7 @@ export class Keeper {
       address:      config.resolverAddress,
       abi:          ResolverAgentAbi,
       functionName: 'initiateMatchResolution',
-      args:         [config.matchMarketAddress, config.fixtureApiUrl],
+      args:         [config.matchMarketAddress, this.fixtureApiUrl],
       value:        deposit * 2n,
     })
     await this.public_.waitForTransactionReceipt({ hash: resolveHash })

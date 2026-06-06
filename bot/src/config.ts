@@ -12,13 +12,12 @@ export const config = {
   factoryAddress:      required('FACTORY_ADDRESS') as Address,
   resolverAddress:     required('RESOLVER_ADDRESS') as Address,
   matchMarketAddress:  required('MATCH_MARKET_ADDRESS') as Address,
-  kickoffTimestamp:    Number(required('KICKOFF_TIMESTAMP')),   // unix seconds
+  kickoffTimestamp:    Number(required('KICKOFF_TIMESTAMP')),
   fixtureId:           required('FIXTURE_ID'),
   sportsApiKey:        required('SPORTS_API_KEY'),
-  // Full URL that Somnia Agents will call to read goals, e.g.:
-  //   https://v3.football.api-sports.io/fixtures?id=12345
-  fixtureApiUrl:       required('FIXTURE_API_URL'),
+  // Auto-derived from localtunnel at startup if not set
+  fixtureApiUrl:       process.env.FIXTURE_API_URL ?? '',
   rpcUrl:              process.env.RPC_URL ?? 'https://dream-rpc.somnia.network',
-  betSizeWei:          BigInt(process.env.BET_SIZE_WEI ?? String(5n * 10n ** 15n)), // 0.005 STT
+  betSizeWei:          BigInt(process.env.BET_SIZE_WEI ?? String(5n * 10n ** 15n)),
   pollIntervalMs:      Number(process.env.POLL_INTERVAL_MS ?? 30_000),
 } as const

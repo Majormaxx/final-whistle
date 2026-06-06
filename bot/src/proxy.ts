@@ -1,14 +1,10 @@
 import { createServer } from 'http'
+import localtunnel from 'localtunnel'
 import { config } from './config.js'
-
-// Serves fixture data publicly so Somnia Agents can call it without auth headers.
-// Start with: BOT_PROXY_PORT=3001 (default)
-// Expose with: npx localtunnel --port 3001 OR ngrok http 3001
-// Then set FIXTURE_API_URL=https://<tunnel-url>?id=FIXTURE_ID
 
 const PORT = Number(process.env.BOT_PROXY_PORT ?? 3001)
 
-export function startProxy(): void {
+export async function startProxy(): Promise<string> {
   const server = createServer(async (req, res) => {
     const url = new URL(req.url ?? '/', `http://localhost:${PORT}`)
     const id = url.searchParams.get('id') ?? config.fixtureId
@@ -27,9 +23,15 @@ export function startProxy(): void {
     }
   })
 
-  server.listen(PORT, () => {
-    console.log(`Fixture proxy listening on http://localhost:${PORT}`)
-    console.log(`Expose it with: npx localtunnel --port ${PORT}`)
-    console.log(`Then set FIXTURE_API_URL=https://<tunnel-url>?id=${config.fixtureId}`)
-  })
+  await new Promise<void>(resolve => server.listen(PORT, resolve))
+  console.log(`[proxy] Listening on http://localhost:${PORT}`)
+
+  const tunnel = await localtunnel({ port: PORT })
+  const fixtureUrl = `${tunnel.url}?id=${config.fixtureId}`
+  console.log(`[proxy] Public URL: ${fixtureUrl}`)
+
+  tunnel.on('error', err => console.error('[proxy] Tunnel error:', err))
+  tunnel.on('close', () => console.warn('[proxy] Tunnel closed — resolution will fail'))
+
+  return fixtureUrl
 }
