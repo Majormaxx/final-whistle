@@ -3,6 +3,7 @@ import './globals.css'
 import { Providers } from '@/components/Providers'
 import { WalletButton } from '@/components/WalletButton'
 import { FaucetButton } from '@/components/FaucetButton'
+import { Footer } from '@/components/Footer'
 
 export const metadata: Metadata = {
   title: 'Final Whistle',
@@ -15,11 +16,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body>
         <Providers>
-          <header className="border-b border-border px-6 py-4 flex items-center justify-between">
+          <header className="border-b border-border px-6 py-4 flex items-center justify-between sticky top-0 z-10 bg-[#0a0f0a]/95 backdrop-blur-sm">
             <a href="/" className="flex items-center gap-3">
               <img src="/logo.svg" alt="Final Whistle" className="h-6 w-auto" />
               <span className="text-white font-medium text-base tracking-tight">Final Whistle</span>
-              <span className="text-xs text-zinc-500 bg-card px-2 py-0.5 rounded-full border border-border">
+              <span className="text-xs text-zinc-500 bg-card px-2 py-0.5 rounded-full border border-border hidden sm:inline">
                 Somnia Testnet
               </span>
             </a>
@@ -29,6 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </div>
           </header>
           <main className="max-w-3xl mx-auto px-4 py-8">{children}</main>
+          <Footer />
         </Providers>
       </body>
     </html>

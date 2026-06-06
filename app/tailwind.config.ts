@@ -8,7 +8,7 @@ const config: Config = {
         pitch: '#0a0f0a',
         surface: '#111811',
         card: '#161e16',
-        border: '#1f2d1f',
+        border: '#2a3d2a',
         green: { 400: '#4ade80', 500: '#22c55e', 600: '#16a34a' },
       },
       fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },

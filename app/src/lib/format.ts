@@ -7,7 +7,7 @@ export function pct(price: bigint): number {
 export function odds(price: bigint): string {
   const p = Number(price) / 1e18
   if (p <= 0) return '—'
-  return (1 / p).toFixed(2) + 'x'
+  return (1 / p).toFixed(2)
 }
 
 export function stt(wei: bigint, decimals = 4): string {

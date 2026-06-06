@@ -33,6 +33,9 @@ export type Fixture = {
   id: number
   homeTeam: string
   awayTeam: string
+  homeLogo: string | null
+  awayLogo: string | null
+  leagueLogo: string | null
   league: string
   country: string
   kickoff: number       // unix seconds
@@ -84,6 +87,9 @@ export async function getTodayFixtures(limit = 5): Promise<Fixture[]> {
     id: r.fixture.id,
     homeTeam: r.teams.home.name,
     awayTeam: r.teams.away.name,
+    homeLogo: r.teams.home.logo ?? null,
+    awayLogo: r.teams.away.logo ?? null,
+    leagueLogo: r.league.logo ?? null,
     league: r.league.name,
     country: r.league.country,
     kickoff: Math.floor(new Date(r.fixture.date).getTime() / 1000),
