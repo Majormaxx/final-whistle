@@ -10,20 +10,16 @@ export function WalletButton() {
   const { ready, authenticated, login, logout } = usePrivy()
   const { wallets } = useWallets()
   const wallet = wallets.find(w => w.walletClientType === 'privy')
-  const [balance, setBalance] = useState<string | null>(null)
+  const [balance, setBalance] = useState<number | null>(null)
 
   useEffect(() => {
     if (!wallet?.address) { setBalance(null); return }
     const pub = createPublicClient({ chain: somniaTestnet, transport: http() })
-    pub.getBalance({ address: wallet.address as `0x${string}` }).then(b => {
-      setBalance((Number(b) / 1e18).toFixed(3))
-    }).catch(() => setBalance(null))
-
-    const id = setInterval(() => {
-      pub.getBalance({ address: wallet.address as `0x${string}` }).then(b => {
-        setBalance((Number(b) / 1e18).toFixed(3))
-      }).catch(() => {})
-    }, 15_000)
+    const fetch = () => pub.getBalance({ address: wallet.address as `0x${string}` })
+      .then(b => setBalance(Number(b) / 1e18))
+      .catch(() => {})
+    fetch()
+    const id = setInterval(fetch, 15_000)
     return () => clearInterval(id)
   }, [wallet?.address])
 
@@ -42,8 +38,10 @@ export function WalletButton() {
 
   return (
     <div className="flex items-center gap-2">
-      {balance !== null && (
-        <span className="text-sm font-semibold text-green-400 tabular-nums">{balance} STT</span>
+      {balance !== null && balance > 0 && (
+        <span className="text-sm font-semibold text-green-400 tabular-nums">
+          {balance.toFixed(3)} STT
+        </span>
       )}
       <span className="text-xs text-zinc-500 font-mono hidden sm:inline">
         {wallet ? shortAddr(wallet.address) : '—'}

@@ -1,18 +1,20 @@
 'use client'
 
 import { useState } from 'react'
+import { Loader2, Zap } from 'lucide-react'
 import { usePrivy, useWallets } from '@privy-io/react-auth'
 import { createWalletClient, custom, parseEther } from 'viem'
 import { MatchMarketAbi } from '@final-whistle/sdk'
 import { somniaTestnet } from '@/lib/chain'
-import { pct, odds, winEstimate, stt } from '@/lib/format'
+import { pct, odds, winEstimate } from '@/lib/format'
 import { saveBet } from '@/lib/bets'
+import { classifyBetError, BET_ERROR_MSG } from '@/lib/bet-error'
 import type { MatchMarketInfo } from '@final-whistle/sdk'
 
 const OUTCOMES = [
-  { label: 'Home wins', index: 0, color: 'text-green-400', activeBg: 'bg-green-500/20 border-green-500', hoverBg: 'hover:bg-green-500/10 border-zinc-700' },
-  { label: 'Draw',      index: 1, color: 'text-zinc-300',  activeBg: 'bg-zinc-600/30 border-zinc-500',   hoverBg: 'hover:bg-zinc-700/30 border-zinc-700' },
-  { label: 'Away wins', index: 2, color: 'text-blue-400',  activeBg: 'bg-blue-500/20 border-blue-500',   hoverBg: 'hover:bg-blue-500/10 border-zinc-700' },
+  { label: 'Home wins', index: 0, color: 'text-green-400', activeBg: 'bg-green-500/20 border-green-500', hoverBg: 'hover:bg-green-500/10 border-zinc-800' },
+  { label: 'Draw',      index: 1, color: 'text-zinc-300',  activeBg: 'bg-zinc-600/30 border-zinc-500',   hoverBg: 'hover:bg-zinc-700/30 border-zinc-800' },
+  { label: 'Away wins', index: 2, color: 'text-blue-400',  activeBg: 'bg-blue-500/20 border-blue-500',   hoverBg: 'hover:bg-blue-500/10 border-zinc-800' },
 ]
 
 const PRESETS = ['0.01', '0.05', '0.1', '0.25']
@@ -22,28 +24,29 @@ export function BetPanel({ market }: { market: MatchMarketInfo }) {
   const { wallets } = useWallets()
   const [selected, setSelected] = useState<0 | 1 | 2 | null>(null)
   const [amount, setAmount] = useState('0.01')
-  const [state, setState] = useState<'idle' | 'confirm' | 'loading' | 'done' | 'error'>('idle')
+  const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [txHash, setTxHash] = useState<string>()
 
   const privyWallet = wallets.find(w => w.walletClientType === 'privy')
 
   async function placeBet() {
     if (selected === null || !privyWallet) return
-    setState('loading')
+    setStatus('loading')
+    setErrorMsg(null)
     try {
       const provider = await privyWallet.getEthereumProvider()
       const client = createWalletClient({ chain: somniaTestnet, transport: custom(provider) })
-      const value = parseEther(amount)
       const hash = await client.writeContract({
         account: privyWallet.address as `0x${string}`,
         address: market.address,
         abi: MatchMarketAbi,
         functionName: 'bet',
         args: [selected],
-        value,
+        value: parseEther(amount),
       })
       setTxHash(hash)
-      setState('done')
+      setStatus('done')
       saveBet({
         txHash: hash,
         marketAddress: market.address,
@@ -54,22 +57,28 @@ export function BetPanel({ market }: { market: MatchMarketInfo }) {
         amount,
         timestamp: Date.now(),
       })
-    } catch (err: any) {
-      console.error(err)
-      setState('error')
-      setTimeout(() => setState('idle'), 4000)
+    } catch (err) {
+      const kind = classifyBetError(err)
+      if (kind === 'rejected') {
+        setStatus('idle')
+        return
+      }
+      setErrorMsg(BET_ERROR_MSG[kind])
+      setStatus('error')
     }
   }
 
-  if (state === 'done') {
+  if (status === 'done') {
     return (
-      <div className="bg-card border border-green-500/40 rounded-xl p-6 text-center">
-        <div className="text-green-400 text-2xl mb-2">⚡</div>
+      <div className="bg-card border border-green-500/30 rounded-xl p-6 text-center">
+        <div className="flex justify-center mb-2">
+          <Zap className="w-6 h-6 text-green-400" strokeWidth={2} />
+        </div>
         <div className="font-semibold text-white mb-1">Bet placed.</div>
         <div className="text-sm text-zinc-400">You'll be paid automatically when the match settles.</div>
         {txHash && (
           <a href={`https://explorer.somnia.network/tx/${txHash}`} target="_blank" rel="noopener noreferrer"
-            className="text-xs text-green-500 hover:underline mt-3 inline-block">
+            className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors mt-3 inline-block">
             View on explorer →
           </a>
         )}
@@ -89,12 +98,13 @@ export function BetPanel({ market }: { market: MatchMarketInfo }) {
           return (
             <button
               key={o.index}
-              onClick={() => { setSelected(o.index as 0|1|2); setState('idle') }}
+              onClick={() => { setSelected(o.index as 0|1|2); setStatus('idle'); setErrorMsg(null) }}
+              aria-label={`${o.label}, odds ${odds(price)}`}
               className={`flex items-center justify-between p-3 rounded-lg border transition-all
                 ${isSelected ? o.activeBg : o.hoverBg}`}
             >
               <div className="flex items-center gap-3">
-                <span className={`w-2.5 h-2.5 rounded-full ${isSelected ? 'bg-current' : 'bg-zinc-600'} ${o.color}`} />
+                <span className={`w-2.5 h-2.5 rounded-full ${isSelected ? 'bg-current' : 'bg-zinc-700'} ${o.color}`} />
                 <span className="text-sm font-medium text-white">{o.label}</span>
               </div>
               <div className="text-right">
@@ -115,7 +125,7 @@ export function BetPanel({ market }: { market: MatchMarketInfo }) {
                 className={`flex-1 py-1 text-xs rounded border transition-colors
                   ${amount === p
                     ? 'border-green-500/60 bg-green-500/10 text-green-400'
-                    : 'border-zinc-700 text-zinc-500 hover:border-zinc-500 hover:text-zinc-300'
+                    : 'border-zinc-800 text-zinc-500 hover:border-zinc-600 hover:text-zinc-300'
                   }`}>
                 {p}
               </button>
@@ -128,7 +138,7 @@ export function BetPanel({ market }: { market: MatchMarketInfo }) {
               focus:outline-none focus:border-green-500/60"
             placeholder="STT amount"
           />
-          <div className="text-xs text-zinc-500 mt-1.5">
+          <div className="text-[11px] text-zinc-500 mt-1.5">
             Win estimate:{' '}
             <span className="text-green-400 font-medium">
               {winEstimate(parseEther(amount || '0'), market.prices[selected])}
@@ -145,15 +155,28 @@ export function BetPanel({ market }: { market: MatchMarketInfo }) {
           Sign in to bet
         </button>
       ) : (
-        <button onClick={placeBet} disabled={selected === null || state === 'loading'}
+        <button onClick={placeBet} disabled={selected === null || status === 'loading'}
           className="w-full py-2.5 bg-green-500 hover:bg-green-400 disabled:opacity-40 disabled:cursor-not-allowed
-            text-black font-bold text-sm rounded-lg transition-colors">
-          {state === 'loading' ? 'Placing bet…' : selected !== null ? `Bet ${amount} STT on ${OUTCOMES[selected].label}` : 'Select an outcome'}
+            text-black font-bold text-sm rounded-lg transition-colors flex items-center justify-center gap-2">
+          {status === 'loading' ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Placing bet…
+            </>
+          ) : selected !== null ? `Bet ${amount} STT on ${OUTCOMES[selected].label}` : 'Select an outcome'}
         </button>
       )}
 
-      {state === 'error' && (
-        <div className="text-xs text-red-400 mt-2 text-center">Transaction failed. Check your balance.</div>
+      {status === 'error' && errorMsg && (
+        <div className="flex items-center justify-between mt-2 px-1">
+          <span className="text-xs text-red-400">{errorMsg}</span>
+          <button
+            onClick={() => { setStatus('idle'); setErrorMsg(null) }}
+            className="text-xs text-zinc-500 hover:text-zinc-300 underline transition-colors ml-3 shrink-0"
+          >
+            Dismiss
+          </button>
+        </div>
       )}
     </div>
   )

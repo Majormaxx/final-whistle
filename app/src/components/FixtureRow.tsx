@@ -29,13 +29,13 @@ export function FixtureRow({ fixture, isLast }: { fixture: Fixture; isLast: bool
       <div className="w-16 shrink-0">
         {fixture.status === 'live' ? (
           <span className="flex items-center gap-1 text-[11px] text-green-500 font-semibold">
-            <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+            <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse shrink-0" />
             {timeLabel(fixture)}
           </span>
         ) : (
           <span className="text-[11px] text-zinc-500">{timeLabel(fixture)}</span>
         )}
-        <div className="text-[10px] text-zinc-600 mt-0.5 truncate w-16">{fixture.league}</div>
+        <div className="text-[11px] text-zinc-600 mt-0.5 truncate w-16">{fixture.league}</div>
       </div>
 
       {/* Teams + logos + score */}
@@ -44,7 +44,7 @@ export function FixtureRow({ fixture, isLast }: { fixture: Fixture; isLast: bool
           <div className="flex-1 min-w-0 space-y-0.5">
             <div className="flex items-center gap-1.5">
               <TeamLogo src={fixture.homeLogo} alt={fixture.homeTeam} />
-              <span className="text-sm font-semibold text-zinc-300 truncate">{fixture.homeTeam}</span>
+              <span className="text-sm font-semibold text-white truncate">{fixture.homeTeam}</span>
             </div>
             <div className="flex items-center gap-1.5">
               <TeamLogo src={fixture.awayLogo} alt={fixture.awayTeam} />
@@ -53,27 +53,22 @@ export function FixtureRow({ fixture, isLast }: { fixture: Fixture; isLast: bool
           </div>
           {hasScore && (
             <div className="shrink-0 text-center px-2">
-              <div className="text-base font-bold text-white tabular-nums">
-                {fixture.goals.home ?? 0}
-              </div>
-              <div className="text-base font-bold text-white tabular-nums">
-                {fixture.goals.away ?? 0}
-              </div>
+              <div className="text-base font-bold text-white tabular-nums">{fixture.goals.home ?? 0}</div>
+              <div className="text-base font-bold text-white tabular-nums">{fixture.goals.away ?? 0}</div>
             </div>
           )}
         </div>
       </div>
 
-      {/* Locked odds */}
+      {/* Locked odds — no market yet */}
       <div className="flex gap-1.5 shrink-0">
-        {['1', 'X', '2'].map(label => (
+        {(['1', 'X', '2'] as const).map(label => (
           <div
             key={label}
-            className="w-14 h-12 rounded-lg border border-zinc-800/80 bg-zinc-900/30 flex flex-col items-center justify-center"
-            title="No market yet"
+            className="w-14 h-12 rounded-lg border border-zinc-800 bg-zinc-900/20 flex flex-col items-center justify-center gap-0.5"
           >
-            <div className="text-sm font-bold text-zinc-700">—</div>
-            <div className="text-[10px] text-zinc-700">{label}</div>
+            <div className="text-xs font-bold text-zinc-700">{label}</div>
+            <div className="text-[10px] text-zinc-800">—</div>
           </div>
         ))}
       </div>

@@ -69,13 +69,15 @@ export function MyBets() {
               className={`flex items-center gap-3 px-4 py-3 ${i < bets.length - 1 ? 'border-b border-border' : ''}`}
             >
               {/* Result chip */}
-              <div className={`shrink-0 w-14 text-center py-1 rounded text-xs font-bold
-                ${bet.result === 'won'     ? 'bg-green-500/20 text-green-400' :
-                  bet.result === 'lost'    ? 'bg-zinc-800 text-zinc-500' :
-                  bet.result === 'pending' ? 'bg-amber-500/10 text-amber-400' :
-                                             'bg-zinc-800 text-zinc-600'}
-              `}>
-                {bet.result === 'won' ? 'WON' : bet.result === 'lost' ? 'LOST' : bet.result === 'pending' ? 'OPEN' : '?'}
+              <div
+                title={bet.result === 'unknown' ? 'Could not read market status — RPC may be temporarily unavailable' : undefined}
+                className={`shrink-0 w-14 text-center py-1 rounded text-xs font-bold
+                  ${bet.result === 'won'     ? 'bg-green-500/20 text-green-400' :
+                    bet.result === 'lost'    ? 'bg-zinc-800 text-zinc-500' :
+                    bet.result === 'pending' ? 'bg-amber-500/10 text-amber-400' :
+                                               'bg-zinc-800 text-zinc-700'}
+                `}>
+                {bet.result === 'won' ? 'WON' : bet.result === 'lost' ? 'LOST' : bet.result === 'pending' ? 'OPEN' : '—'}
               </div>
 
               {/* Match + outcome */}

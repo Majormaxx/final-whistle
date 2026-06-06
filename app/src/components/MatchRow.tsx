@@ -2,21 +2,24 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
+import { ChevronRight, Loader2, Zap } from 'lucide-react'
 import { usePrivy, useWallets } from '@privy-io/react-auth'
 import { createWalletClient, custom, parseEther } from 'viem'
 import { MatchMarketAbi, MarketStatus } from '@final-whistle/sdk'
 import { somniaTestnet } from '@/lib/chain'
 import { odds, pct, winEstimate, kickoffLabel } from '@/lib/format'
 import { saveBet } from '@/lib/bets'
+import { classifyBetError, BET_ERROR_MSG } from '@/lib/bet-error'
 import type { MatchMarketInfo } from '@final-whistle/sdk'
 import type { Fixture } from '@/lib/fixtures'
 
 type Outcome = 0 | 1 | 2
+type BetStatus = 'idle' | 'loading' | 'done' | 'error'
 
 const OUTCOME_META = [
-  { label: 'Home wins', color: 'text-green-400', ring: 'ring-green-500/60', activeBg: 'bg-green-500/20', hoverBg: 'hover:bg-green-500/10' },
-  { label: 'Draw',      color: 'text-zinc-300',  ring: 'ring-zinc-500/60',  activeBg: 'bg-zinc-600/30',  hoverBg: 'hover:bg-zinc-700/30' },
-  { label: 'Away wins', color: 'text-blue-400',  ring: 'ring-blue-500/60',  activeBg: 'bg-blue-500/20',  hoverBg: 'hover:bg-blue-500/10' },
+  { label: 'Home wins', color: 'text-green-400', ring: 'ring-green-500/60', activeBg: 'bg-green-500/20', hoverBg: 'hover:bg-green-500/10', ariaLabel: '1' },
+  { label: 'Draw',      color: 'text-zinc-300',  ring: 'ring-zinc-500/60',  activeBg: 'bg-zinc-600/30',  hoverBg: 'hover:bg-zinc-700/30',  ariaLabel: 'X' },
+  { label: 'Away wins', color: 'text-blue-400',  ring: 'ring-blue-500/60',  activeBg: 'bg-blue-500/20',  hoverBg: 'hover:bg-blue-500/10',  ariaLabel: '2' },
 ]
 
 const PRESETS = ['0.01', '0.05', '0.1', '0.25']
@@ -55,7 +58,8 @@ export function MatchRow({
   const { wallets } = useWallets()
   const [selected, setSelected] = useState<Outcome | null>(null)
   const [amount, setAmount] = useState('0.01')
-  const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
+  const [status, setStatus] = useState<BetStatus>('idle')
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [txHash, setTxHash] = useState<string>()
   const flash = useOddsFlash(market.prices)
 
@@ -72,11 +76,13 @@ export function MatchRow({
     if (!isBettable) return
     setSelected(prev => (prev === i ? null : i))
     setStatus('idle')
+    setErrorMsg(null)
   }
 
   async function placeBet() {
     if (selected === null || !privyWallet) return
     setStatus('loading')
+    setErrorMsg(null)
     try {
       const provider = await privyWallet.getEthereumProvider()
       const client = createWalletClient({ chain: somniaTestnet, transport: custom(provider) })
@@ -100,9 +106,14 @@ export function MatchRow({
         amount,
         timestamp: Date.now(),
       })
-    } catch {
+    } catch (err) {
+      const kind = classifyBetError(err)
+      if (kind === 'rejected') {
+        setStatus('idle')
+        return
+      }
+      setErrorMsg(BET_ERROR_MSG[kind])
       setStatus('error')
-      setTimeout(() => setStatus('idle'), 3500)
     }
   }
 
@@ -120,7 +131,7 @@ export function MatchRow({
         <div className="w-16 shrink-0">
           {isOpen ? (
             <span className="flex items-center gap-1 text-[11px] text-green-500 font-semibold">
-              <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+              <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse shrink-0" />
               {fixture?.elapsed != null ? `${fixture.elapsed}'` : 'LIVE'}
             </span>
           ) : isClosed ? (
@@ -130,7 +141,7 @@ export function MatchRow({
           ) : (
             <span className="text-[11px] text-zinc-500">{kickoffLabel(market.kickoff)}</span>
           )}
-          <div className="text-[10px] text-zinc-600 mt-0.5 truncate w-16">{league}</div>
+          <div className="text-[11px] text-zinc-600 mt-0.5 truncate w-16">{league}</div>
         </div>
 
         {/* Teams + logos + score */}
@@ -172,20 +183,21 @@ export function MatchRow({
                 key={i}
                 onClick={() => handleOddsClick(i)}
                 disabled={!isBettable}
-                title={isClosed ? 'Market suspended' : undefined}
+                aria-label={`${meta.ariaLabel} — ${meta.label}, odds ${odds(price)}`}
+                title={isClosed ? 'Suspended between goal windows — reopens automatically' : undefined}
                 className={`w-14 h-12 rounded-lg border text-center transition-all ${flashClass(i)}
                   ${!isBettable
                     ? 'bg-zinc-900/40 border-zinc-800 cursor-not-allowed opacity-50'
                     : isActive
                       ? `${meta.activeBg} border-current ${meta.ring} ring-1 ${meta.color}`
-                      : `bg-zinc-800/60 border-zinc-700/50 ${meta.hoverBg} cursor-pointer text-zinc-300`
+                      : `bg-zinc-800/60 border-zinc-800 ${meta.hoverBg} cursor-pointer text-zinc-300`
                   }
                 `}
               >
                 <div className={`text-sm font-bold leading-tight ${isActive && isBettable ? meta.color : ''}`}>
                   {odds(price)}
                 </div>
-                <div className="text-[10px] text-zinc-500 leading-tight">{pct(price)}%</div>
+                <div className="text-[11px] text-zinc-500 leading-tight">{pct(price)}%</div>
               </button>
             )
           })}
@@ -194,26 +206,35 @@ export function MatchRow({
         {/* Detail link */}
         <Link
           href={`/match/${market.address}`}
+          aria-label="View match details"
           className="shrink-0 text-zinc-600 hover:text-zinc-300 transition-colors pl-1"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
+          <ChevronRight className="w-4 h-4" strokeWidth={2} />
         </Link>
       </div>
 
+      {/* Suspended notice */}
+      {isClosed && (
+        <div className="mx-4 mb-3 px-3 py-2 rounded-lg bg-amber-500/5 border border-amber-500/20 text-[11px] text-amber-500/80">
+          Market suspended — reopens automatically for the next goal window
+        </div>
+      )}
+
       {/* Inline bet panel */}
       {selected !== null && isBettable && (
-        <div className="mx-4 mb-3 p-3 rounded-lg bg-zinc-900 border border-zinc-700/60">
+        <div className="mx-4 mb-3 p-3 rounded-lg bg-zinc-900 border border-zinc-800 animate-slide-down">
           {status === 'done' ? (
             <div className="flex items-center justify-between">
-              <span className="text-sm text-green-400 font-medium">⚡ Bet placed. Paid automatically when it settles.</span>
+              <span className="flex items-center gap-1.5 text-sm text-green-400 font-medium">
+                <Zap className="w-3.5 h-3.5" strokeWidth={2.5} />
+                Bet placed. Paid automatically when it settles.
+              </span>
               {txHash && (
                 <a
                   href={`https://explorer.somnia.network/tx/${txHash}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-xs text-green-500 hover:underline ml-2 shrink-0"
+                  className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors ml-2 shrink-0"
                 >
                   View →
                 </a>
@@ -241,7 +262,7 @@ export function MatchRow({
                     className={`flex-1 py-1 text-xs rounded border transition-colors
                       ${amount === p
                         ? 'border-green-500/60 bg-green-500/10 text-green-400'
-                        : 'border-zinc-700 text-zinc-500 hover:border-zinc-500 hover:text-zinc-300'
+                        : 'border-zinc-800 text-zinc-500 hover:border-zinc-600 hover:text-zinc-300'
                       }`}
                   >
                     {p}
@@ -259,7 +280,7 @@ export function MatchRow({
                 />
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex flex-col gap-1.5">
                 {!authenticated ? (
                   <button
                     onClick={login}
@@ -272,13 +293,26 @@ export function MatchRow({
                     onClick={placeBet}
                     disabled={status === 'loading'}
                     className="flex-1 py-2 bg-green-500 hover:bg-green-400 disabled:opacity-50
-                      text-black text-sm font-bold rounded-lg transition-colors"
+                      text-black text-sm font-bold rounded-lg transition-colors flex items-center justify-center gap-2"
                   >
-                    {status === 'loading' ? 'Placing…' : `Bet ${amount} STT`}
+                    {status === 'loading' ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Placing…
+                      </>
+                    ) : `Bet ${amount} STT`}
                   </button>
                 )}
-                {status === 'error' && (
-                  <span className="text-xs text-red-400 self-center">Failed. Check balance.</span>
+                {status === 'error' && errorMsg && (
+                  <div className="flex items-center justify-between px-1">
+                    <span className="text-xs text-red-400">{errorMsg}</span>
+                    <button
+                      onClick={() => { setStatus('idle'); setErrorMsg(null) }}
+                      className="text-xs text-zinc-500 hover:text-zinc-300 underline transition-colors ml-3 shrink-0"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
                 )}
               </div>
             </div>

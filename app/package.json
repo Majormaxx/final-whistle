@@ -10,6 +10,7 @@
   "dependencies": {
     "@final-whistle/sdk": "../sdk",
     "@privy-io/react-auth": "^1.93.0",
+    "lucide-react": "^1.17.0",
     "next": "^15.3.0",
     "react": "^19",
     "react-dom": "^19",

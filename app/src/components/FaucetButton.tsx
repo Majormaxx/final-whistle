@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useWallets } from '@privy-io/react-auth'
 
-type State = 'idle' | 'loading' | 'done' | 'already' | 'error'
+type State = 'idle' | 'loading' | 'done' | 'already' | 'error' | 'unavailable'
 
 export function FaucetButton() {
   const { wallets } = useWallets()
@@ -20,15 +20,10 @@ export function FaucetButton() {
         body: JSON.stringify({ address: wallet.address }),
       })
       const body = await res.json()
-      if (res.status === 429 || body.error === 'already dripped') {
-        setState('already')
-        return
-      }
-      if (!res.ok) throw new Error(body.error ?? 'unknown error')
-      if (body.skipped) {
-        setState('already')
-        return
-      }
+      if (res.status === 503) { setState('unavailable'); return }
+      if (res.status === 429 || body.error === 'already dripped') { setState('already'); return }
+      if (!res.ok) throw new Error(body.error ?? 'unknown')
+      if (body.skipped) { setState('already'); return }
       setState('done')
     } catch {
       setState('error')
@@ -38,27 +33,28 @@ export function FaucetButton() {
 
   if (!wallet) return null
 
-  const label: Record<State, string> = {
-    idle:    'Get STT',
-    loading: 'Sending…',
-    done:    '0.1 STT sent ✓',
-    already: 'Already received',
-    error:   'Try again',
+  const config: Record<State, { label: string; green: boolean; disabled: boolean }> = {
+    idle:        { label: 'Get STT',          green: false, disabled: false },
+    loading:     { label: 'Sending…',         green: false, disabled: true  },
+    done:        { label: '0.1 STT sent ✓',   green: true,  disabled: true  },
+    already:     { label: 'Already received', green: true,  disabled: true  },
+    unavailable: { label: 'Faucet offline',   green: false, disabled: true  },
+    error:       { label: 'Try again',         green: false, disabled: false },
   }
 
-  const disabled = state !== 'idle' && state !== 'error'
+  const { label, green, disabled } = config[state]
 
   return (
     <button
       onClick={state === 'error' ? () => setState('idle') : drip}
       disabled={disabled}
       className={`px-3 py-1.5 border text-xs rounded-lg transition-colors disabled:opacity-50
-        ${state === 'done' || state === 'already'
+        ${green
           ? 'border-green-500/40 text-green-400'
           : 'border-border text-zinc-300 hover:text-white hover:border-green-500'
         }`}
     >
-      {label[state]}
+      {label}
     </button>
   )
 }

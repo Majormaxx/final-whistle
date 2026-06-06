@@ -1,8 +1,10 @@
+import { notFound } from 'next/navigation'
 import { readClient } from '@/lib/sdk'
 import { BetPanel } from '@/components/BetPanel'
 import { NextGoalPanel } from '@/components/NextGoalPanel'
 import { pct, stt, kickoffLabel } from '@/lib/format'
 import { MarketStatus, Outcome } from '@final-whistle/sdk'
+import { isAddress } from 'viem'
 import type { Address } from 'viem'
 
 export const revalidate = 5
@@ -15,8 +17,14 @@ const RESULT_LABEL: Record<number, string> = {
 
 export default async function MatchPage({ params }: { params: Promise<{ address: string }> }) {
   const { address: rawAddress } = await params
+  if (!isAddress(rawAddress)) notFound()
   const address = rawAddress as Address
-  const market = await readClient.getMatchMarket(address)
+  let market
+  try {
+    market = await readClient.getMatchMarket(address)
+  } catch {
+    notFound()
+  }
 
   const nextGoalAddresses = await readClient.getNextGoalMarkets(market.marketId)
   const nextGoalMarkets = await Promise.all(
