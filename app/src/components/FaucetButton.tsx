@@ -36,7 +36,7 @@ export function FaucetButton() {
     >
       {state === 'idle'    && 'Get STT'}
       {state === 'loading' && 'Sending…'}
-      {state === 'done'    && '0.01 STT received'}
+      {state === 'done'    && '0.1 STT received'}
       {state === 'error'   && 'Try again'}
     </button>
   )

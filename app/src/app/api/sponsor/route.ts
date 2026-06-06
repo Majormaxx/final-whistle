@@ -9,8 +9,8 @@ import {
 import { privateKeyToAccount } from 'viem/accounts'
 import { somniaTestnet } from '@/lib/chain'
 
-const DRIP        = parseEther('0.01')         // 0.01 STT covers many bets
-const MIN_BALANCE = parseEther('0.005')         // don't drip if they already have this much
+const DRIP        = parseEther('0.1')           // gas alone ~0.023 STT; 0.1 covers 3-4 bets
+const MIN_BALANCE = parseEther('0.04')          // don't drip if they already have enough for a bet
 const SPONSOR_KEY = process.env.SPONSOR_PRIVATE_KEY as `0x${string}`
 
 // In-memory dedup — resets on server restart, fine for hackathon
