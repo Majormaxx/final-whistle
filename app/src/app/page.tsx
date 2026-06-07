@@ -4,6 +4,7 @@ import { getTodayFixtures } from '@/lib/fixtures'
 import { MatchRow } from '@/components/MatchRow'
 import { FixtureRow } from '@/components/FixtureRow'
 import { Hero } from '@/components/Hero'
+import { FirstActionGuide } from '@/components/FirstActionGuide'
 import { MyBets } from '@/components/MyBets'
 import type { MatchMarketInfo } from '@final-whistle/sdk'
 import type { Fixture } from '@/lib/fixtures'
@@ -127,6 +128,7 @@ export default function Home() {
   return (
     <div>
       <Hero />
+      <FirstActionGuide />
 
       <div className="mb-6">
         <h1 className="text-xl font-bold text-white">Today's matches</h1>

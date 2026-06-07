@@ -46,6 +46,7 @@ export function NextGoalPanel({ market }: { market: NextGoalMarketInfo }) {
       saveBet({
         txHash: hash,
         marketAddress: market.address,
+        marketType: 'nextGoal',
         homeTeam: 'Next goal',
         awayTeam: 'window',
         league: 'In-play',

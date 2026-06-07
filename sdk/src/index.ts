@@ -12,6 +12,8 @@ export {
   type NextGoalMarketCreatedEvent,
   type BetPlacedEvent,
   type MarketResolvedEvent,
+  type ResolutionInitiatedEvent,
+  type PayoutSentEvent,
   type BetEstimate,
 } from './types.js'
 

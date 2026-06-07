@@ -50,6 +50,7 @@ export function BetPanel({ market }: { market: MatchMarketInfo }) {
       saveBet({
         txHash: hash,
         marketAddress: market.address,
+        marketType: 'match',
         homeTeam: market.homeTeam,
         awayTeam: market.awayTeam,
         league: 'Friendlies',

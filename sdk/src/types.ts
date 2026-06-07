@@ -80,6 +80,19 @@ export interface MarketResolvedEvent {
   log: Log
 }
 
+export interface ResolutionInitiatedEvent {
+  market: Address
+  homeReqId: bigint
+  awayReqId: bigint
+  log: Log
+}
+
+export interface PayoutSentEvent {
+  bettor: Address
+  amount: bigint
+  log: Log
+}
+
 // ── client config ─────────────────────────────────────────────────────────
 
 export interface FinalWhistleConfig {

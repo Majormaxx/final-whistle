@@ -107,6 +107,7 @@ export function MatchRow({
       saveBet({
         txHash: hash,
         marketAddress: market.address,
+        marketType: 'match',
         homeTeam: market.homeTeam,
         awayTeam: market.awayTeam,
         league,

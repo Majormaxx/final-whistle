@@ -49,6 +49,14 @@ export class Keeper {
   // can't be derived from chain history instead.
   private readonly resolutionInitiated = new Set<Address>()
 
+  // Real (non-keeper) addresses seen placing bets on each market this process
+  // is watching, captured live via BetPlaced as they land. Used to push
+  // payoutBatch on resolution — see _payoutRealBettors for why an incomplete
+  // set here is degraded, never wrong: claim() is always available as a
+  // self-serve fallback (now wired into the frontend's MyBets), so this is
+  // pure UX/demo polish, not settlement-critical state.
+  private readonly bettorsByMarket = new Map<Address, Set<Address>>()
+
   constructor(fixtureApiUrl: string) {
     this.fixtureApiUrl = fixtureApiUrl
     this.account = privateKeyToAccount(config.privateKey)
@@ -343,27 +351,37 @@ export class Keeper {
   // ── event watchers ────────────────────────────────────────────────────
 
   private _watchMarketResolutions(): void {
-    // Watch match market for resolution → claim
+    // Watch match market for resolution → claim our own winnings, then push
+    // payouts to every real bettor we saw (the contract's own comment marks
+    // payoutBatch "callable by anyone (frontend calls on resolution)" — until
+    // now nothing ever did, so real users had no way to get paid but claim()).
+    this._trackBettors(config.matchMarketAddress, MatchMarketAbi)
     this.client.watchMarketResolved(config.matchMarketAddress, MatchMarketAbi, async () => {
-      console.log('Match market resolved — claiming')
-      try {
-        const hash = await this.client.claimMatch(config.matchMarketAddress)
-        const receipt = await this.public_.waitForTransactionReceipt({ hash })
-        this._recordPayout(receipt, MatchMarketAbi)
-      } catch (_) { /* nothing to claim */ }
+      console.log('Match market resolved — claiming and paying out real bettors')
+      await this._claimAndRecord(config.matchMarketAddress, MatchMarketAbi)
+      await this._payoutRealBettors(config.matchMarketAddress, MatchMarketAbi)
     })
 
-    // Watch factory for new next-goal windows → attach resolution watcher
+    // Watch factory for new next-goal windows → track their bettors and attach
+    // the same claim-then-payout resolution handler.
     this.client.watchNextGoalMarketCreated(async (event) => {
+      this._trackBettors(event.market, NextGoalMarketAbi)
       this.client.watchMarketResolved(event.market, NextGoalMarketAbi, async () => {
-        console.log(`Next-goal market ${event.market} resolved — claiming`)
-        try {
-          const hash = await this.client.claimNextGoal(event.market)
-          const receipt = await this.public_.waitForTransactionReceipt({ hash })
-          this._recordPayout(receipt, NextGoalMarketAbi)
-        } catch (_) { /* nothing to claim */ }
+        console.log(`Next-goal market ${event.market} resolved — claiming and paying out real bettors`)
+        await this._claimAndRecord(event.market, NextGoalMarketAbi)
+        await this._payoutRealBettors(event.market, NextGoalMarketAbi)
       })
     })
+  }
+
+  private async _claimAndRecord(market: Address, abi: typeof MatchMarketAbi | typeof NextGoalMarketAbi): Promise<void> {
+    try {
+      const hash = abi === MatchMarketAbi
+        ? await this.client.claimMatch(market)
+        : await this.client.claimNextGoal(market)
+      const receipt = await this.public_.waitForTransactionReceipt({ hash })
+      this._recordPayout(receipt, abi)
+    } catch (_) { /* nothing to claim */ }
   }
 
   private _recordPayout(receipt: TransactionReceipt, abi: typeof MatchMarketAbi | typeof NextGoalMarketAbi): void {
@@ -371,6 +389,46 @@ export class Keeper {
     if (amount === null) return
     this.received += amount
     console.log(`Claimed payout: ${fmt(amount)} STT`)
+  }
+
+  // Start collecting real (non-keeper) bettor addresses for `market` from this
+  // moment forward. Subscribed alongside the resolution watcher because the
+  // two are one unit of work: "everything we need to settle this market
+  // cleanly for everyone, not just ourselves."
+  private _trackBettors(market: Address, abi: typeof MatchMarketAbi | typeof NextGoalMarketAbi): void {
+    const bettors = new Set<Address>()
+    this.bettorsByMarket.set(market, bettors)
+    this.client.watchBetsPlaced(market, abi, (event) => {
+      if (event.bettor.toLowerCase() !== this.account.address.toLowerCase()) {
+        bettors.add(event.bettor)
+      }
+    })
+  }
+
+  // Push payouts to every real address we watched bet on `market`. Safe to
+  // include addresses that backed a losing outcome — the contract filters to
+  // actual winners itself (`if (winShares == 0) continue`) and reverts with
+  // "no winners" only if NO ONE won, which can't happen here since the keeper
+  // always seeds every outcome (see _betMatchMarket/_betYes), guaranteeing
+  // quantities[winOutcome] > 0.
+  //
+  // An incomplete bettor set (e.g. someone bet before this process attached
+  // its watcher, or the bot restarted mid-match) means that address is simply
+  // skipped here — never paid wrong, never double-paid (the contract zeroes
+  // `shares` on first payout). They keep the same self-serve claim() escape
+  // hatch every bettor has, now wired into the frontend's MyBets.
+  private async _payoutRealBettors(market: Address, abi: typeof MatchMarketAbi | typeof NextGoalMarketAbi): Promise<void> {
+    const bettors = this.bettorsByMarket.get(market)
+    if (!bettors || bettors.size === 0) return
+    try {
+      const hash = abi === MatchMarketAbi
+        ? await this.client.payoutMatchBatch(market, [...bettors])
+        : await this.client.payoutNextGoalBatch(market, [...bettors])
+      await this.public_.waitForTransactionReceipt({ hash })
+      console.log(`Paid out ${bettors.size} real bettor(s) on ${market}`)
+    } catch (err) {
+      console.error(`payoutBatch failed for ${market}:`, err)
+    }
   }
 
   // ── helpers ───────────────────────────────────────────────────────────

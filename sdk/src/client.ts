@@ -23,6 +23,8 @@ import type {
   NextGoalMarketCreatedEvent,
   BetPlacedEvent,
   MarketResolvedEvent,
+  ResolutionInitiatedEvent,
+  PayoutSentEvent,
   BetEstimate,
 } from './types.js'
 import { MarketStatus, Outcome } from './types.js'
@@ -234,6 +236,49 @@ export class FinalWhistleClient {
     })
   }
 
+  // How much `account` would receive by calling claim() right now — 0n if the
+  // market isn't resolved yet, they didn't back the winning outcome, or they
+  // (or a payoutBatch run) already claimed and zeroed their shares. Mirrors
+  // the contract's own payout math read-only, since neither market exposes a
+  // "previewClaim" view — this is the only way to show the amount in the UI
+  // before the user spends gas finding out.
+  async getClaimableMatch(marketAddress: Address, account: Address): Promise<bigint> {
+    const [status, result, pool] = await Promise.all([
+      this.public.readContract({ address: marketAddress, abi: MatchMarketAbi, functionName: 'status' }) as Promise<number>,
+      this.public.readContract({ address: marketAddress, abi: MatchMarketAbi, functionName: 'result' }) as Promise<number>,
+      this.public.readContract({ address: marketAddress, abi: MatchMarketAbi, functionName: 'pool' }) as Promise<bigint>,
+    ])
+    if (Number(status) !== MarketStatus.Resolved) return 0n
+    const winIdx = Number(result) - Outcome.Home // HOME=1→0, DRAW=2→1, AWAY=3→2
+    if (winIdx < 0 || winIdx > 2) return 0n
+
+    const [winShares, totalWinShares] = await Promise.all([
+      this.public.readContract({ address: marketAddress, abi: MatchMarketAbi, functionName: 'shares', args: [account, BigInt(winIdx)] }) as Promise<bigint>,
+      this.public.readContract({ address: marketAddress, abi: MatchMarketAbi, functionName: 'quantities', args: [BigInt(winIdx)] }) as Promise<bigint>,
+    ])
+    if (winShares === 0n || totalWinShares === 0n) return 0n
+    return (pool * winShares) / totalWinShares
+  }
+
+  // Same as getClaimableMatch but for the binary YES/NO shape of NextGoalMarket.
+  async getClaimableNextGoal(marketAddress: Address, account: Address): Promise<bigint> {
+    const [status, result, pool] = await Promise.all([
+      this.public.readContract({ address: marketAddress, abi: NextGoalMarketAbi, functionName: 'status' }) as Promise<number>,
+      this.public.readContract({ address: marketAddress, abi: NextGoalMarketAbi, functionName: 'result' }) as Promise<number>,
+      this.public.readContract({ address: marketAddress, abi: NextGoalMarketAbi, functionName: 'pool' }) as Promise<bigint>,
+    ])
+    if (Number(status) !== MarketStatus.Resolved) return 0n
+    const winIdx = Number(result) === Outcome.Yes ? 0 : Number(result) === Outcome.No ? 1 : -1
+    if (winIdx < 0) return 0n
+
+    const [winShares, totalWinShares] = await Promise.all([
+      this.public.readContract({ address: marketAddress, abi: NextGoalMarketAbi, functionName: 'shares', args: [account, BigInt(winIdx)] }) as Promise<bigint>,
+      this.public.readContract({ address: marketAddress, abi: NextGoalMarketAbi, functionName: 'quantities', args: [BigInt(winIdx)] }) as Promise<bigint>,
+    ])
+    if (winShares === 0n || totalWinShares === 0n) return 0n
+    return (pool * winShares) / totalWinShares
+  }
+
   async claimMatch(marketAddress: Address): Promise<Hash> {
     this._requireWallet()
     return this.wallet!.writeContract({
@@ -388,6 +433,48 @@ export class FinalWhistleClient {
         for (const log of logs) {
           const args = log.args as any
           onEvent({ result: Number(args.result) as Outcome, log: log as Log })
+        }
+      },
+    })
+  }
+
+  watchPayoutSent(
+    marketAddress: Address,
+    abi: typeof MatchMarketAbi | typeof NextGoalMarketAbi,
+    onEvent: (event: PayoutSentEvent) => void,
+  ): () => void {
+    return this.public.watchContractEvent({
+      address: marketAddress,
+      abi,
+      eventName: 'PayoutSent',
+      onLogs: (logs) => {
+        for (const log of logs) {
+          const args = log.args as any
+          onEvent({ bettor: args.bettor, amount: args.amount, log: log as Log })
+        }
+      },
+    })
+  }
+
+  // Resolver fires this the moment it deposits and asks the agent platform to
+  // read a score — the earliest on-chain signal that a settlement is in flight.
+  watchResolutionInitiated(
+    onEvent: (event: ResolutionInitiatedEvent) => void,
+  ): () => void {
+    this._requireResolver()
+    return this.public.watchContractEvent({
+      address: this.resolverAddress!,
+      abi: ResolverAgentAbi,
+      eventName: 'ResolutionInitiated',
+      onLogs: (logs) => {
+        for (const log of logs) {
+          const args = log.args as any
+          onEvent({
+            market: args.market,
+            homeReqId: args.homeReqId,
+            awayReqId: args.awayReqId,
+            log: log as Log,
+          })
         }
       },
     })

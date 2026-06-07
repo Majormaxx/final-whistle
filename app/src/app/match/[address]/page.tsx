@@ -2,6 +2,9 @@ import { notFound } from 'next/navigation'
 import { readClient } from '@/lib/sdk'
 import { BetPanel } from '@/components/BetPanel'
 import { NextGoalPanel } from '@/components/NextGoalPanel'
+import { MarketTimeline } from '@/components/MarketTimeline'
+import { AgentActivity } from '@/components/AgentActivity'
+import { StatsBanner } from '@/components/StatsBanner'
 import { pct, stt, kickoffLabel } from '@/lib/format'
 import { MarketStatus, Outcome } from '@final-whistle/sdk'
 import { isAddress } from 'viem'
@@ -97,6 +100,8 @@ export default async function MatchPage({ params }: { params: Promise<{ address:
         </div>
       </div>
 
+      <StatsBanner match={market} windows={nextGoalMarkets} />
+
       {/* Bet panels */}
       <div className="flex flex-col gap-3">
         {isOpen && <BetPanel market={market} />}
@@ -104,6 +109,14 @@ export default async function MatchPage({ params }: { params: Promise<{ address:
         {openWindows.map(w => (
           <NextGoalPanel key={w.address} market={w} />
         ))}
+
+        {isOpen && (
+          <AgentActivity
+            matchAddress={market.address}
+            parentMatchId={market.marketId}
+            initialWindows={nextGoalMarkets}
+          />
+        )}
 
         {isResolved && (
           <div className="bg-card border border-green-500/30 rounded-xl p-6 text-center">
@@ -115,6 +128,8 @@ export default async function MatchPage({ params }: { params: Promise<{ address:
             </div>
           </div>
         )}
+
+        <MarketTimeline windows={nextGoalMarkets} />
       </div>
     </div>
   )
