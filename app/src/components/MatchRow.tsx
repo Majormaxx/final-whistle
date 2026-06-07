@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { ChevronRight, Loader2, Zap } from 'lucide-react'
 import { usePrivy, useWallets } from '@privy-io/react-auth'
 import { createWalletClient, custom, parseEther } from 'viem'
@@ -10,6 +11,7 @@ import { somniaTestnet } from '@/lib/chain'
 import { odds, pct, winEstimate, kickoffLabel } from '@/lib/format'
 import { saveBet } from '@/lib/bets'
 import { classifyBetError, BET_ERROR_MSG } from '@/lib/bet-error'
+import { useToast } from '@/lib/toast-context'
 import type { MatchMarketInfo } from '@final-whistle/sdk'
 import type { Fixture } from '@/lib/fixtures'
 
@@ -54,8 +56,10 @@ export function MatchRow({
   fixture?: Fixture
   isLast: boolean
 }) {
+  const router = useRouter()
   const { authenticated, login } = usePrivy()
   const { wallets } = useWallets()
+  const toast = useToast()
   const [selected, setSelected] = useState<Outcome | null>(null)
   const [amount, setAmount] = useState('0.01')
   const [status, setStatus] = useState<BetStatus>('idle')
@@ -115,6 +119,7 @@ export function MatchRow({
         amount,
         timestamp: Date.now(),
       })
+      toast.push({ kind: 'success', message: `Bet placed — ${market.homeTeam} vs ${market.awayTeam}`, txHash: hash })
     } catch (err) {
       const kind = classifyBetError(err)
       if (kind === 'rejected') {
@@ -123,6 +128,7 @@ export function MatchRow({
       }
       setErrorMsg(BET_ERROR_MSG[kind])
       setStatus('error')
+      toast.push({ kind: 'error', message: BET_ERROR_MSG[kind] })
     }
   }
 
@@ -132,15 +138,26 @@ export function MatchRow({
     return ''
   }
 
+  function openDetails() {
+    router.push(`/match/${market.address}`)
+  }
+
   return (
-    <div className={`${!isLast ? 'border-b border-border' : ''}`}>
+    <div
+      role="link"
+      tabIndex={0}
+      aria-label={`${market.homeTeam} vs ${market.awayTeam} — view match details`}
+      onClick={openDetails}
+      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetails() } }}
+      className={`cursor-pointer hover:bg-zinc-900/40 transition-colors ${!isLast ? 'border-b border-border' : ''}`}
+    >
       {/* Main row */}
       <div className="flex items-center px-4 py-3 gap-3">
         {/* Status + league */}
         <div className="w-16 shrink-0">
           {isLive ? (
-            <span className="flex items-center gap-1 text-[11px] text-green-500 font-semibold">
-              <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse shrink-0" />
+            <span className="flex items-center gap-1 text-[11px] text-red-400 font-semibold">
+              <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse shrink-0" />
               {fixture?.elapsed != null ? `${fixture.elapsed}'` : 'LIVE'}
             </span>
           ) : isClosed ? (
@@ -182,7 +199,7 @@ export function MatchRow({
         </div>
 
         {/* Odds buttons */}
-        <div className="flex gap-1.5 shrink-0">
+        <div className="flex gap-1.5 shrink-0" onClick={e => e.stopPropagation()}>
           {([0, 1, 2] as Outcome[]).map(i => {
             const meta = OUTCOME_META[i]
             const price = market.prices[i]
@@ -212,10 +229,11 @@ export function MatchRow({
           })}
         </div>
 
-        {/* Detail link */}
+        {/* Detail link — row itself now navigates; chevron stays as the visual cue */}
         <Link
           href={`/match/${market.address}`}
           aria-label="View match details"
+          onClick={e => e.stopPropagation()}
           className="shrink-0 text-zinc-600 hover:text-zinc-300 transition-colors pl-1"
         >
           <ChevronRight className="w-4 h-4" strokeWidth={2} />
@@ -231,7 +249,10 @@ export function MatchRow({
 
       {/* Inline bet panel */}
       {selected !== null && isBettable && (
-        <div className="mx-4 mb-3 p-3 rounded-lg bg-zinc-900 border border-zinc-800 animate-slide-down">
+        <div
+          className="mx-4 mb-3 p-3 rounded-lg bg-zinc-900 border border-zinc-800 animate-slide-down"
+          onClick={e => e.stopPropagation()}
+        >
           {status === 'done' ? (
             <div className="flex items-center justify-between">
               <span className="flex items-center gap-1.5 text-sm text-green-400 font-medium">

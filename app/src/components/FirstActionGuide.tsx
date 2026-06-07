@@ -63,7 +63,7 @@ export function FirstActionGuide() {
             <div key={step.label} className="flex items-center gap-2.5">
               {i > 0 && <div className="w-4 h-px bg-border" />}
               <div className="flex items-center gap-2">
-                <span className={`flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold shrink-0 ${style.badge}`}>
+                <span className={`flex items-center justify-center w-5 h-5 rounded-full text-[11px] font-bold shrink-0 ${style.badge}`}>
                   {step.state === 'done' ? <Check className="w-3 h-3" strokeWidth={3} /> : i + 1}
                 </span>
                 <span className={`text-xs whitespace-nowrap ${style.text}`}>{step.label}</span>

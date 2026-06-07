@@ -28,8 +28,8 @@ export function FixtureRow({ fixture, isLast }: { fixture: Fixture; isLast: bool
       {/* Status + league */}
       <div className="w-16 shrink-0">
         {fixture.status === 'live' ? (
-          <span className="flex items-center gap-1 text-[11px] text-green-500 font-semibold">
-            <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse shrink-0" />
+          <span className="flex items-center gap-1 text-[11px] text-red-400 font-semibold">
+            <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse shrink-0" />
             {timeLabel(fixture)}
           </span>
         ) : (
@@ -68,7 +68,7 @@ export function FixtureRow({ fixture, isLast }: { fixture: Fixture; isLast: bool
             className="w-14 h-12 rounded-lg border border-zinc-800 bg-zinc-900/20 flex flex-col items-center justify-center gap-0.5"
           >
             <div className="text-xs font-bold text-zinc-700">{label}</div>
-            <div className="text-[10px] text-zinc-800">—</div>
+            <div className="text-[11px] text-zinc-800">—</div>
           </div>
         ))}
       </div>

@@ -9,6 +9,7 @@ import { somniaTestnet } from '@/lib/chain'
 import { readClient } from '@/lib/sdk'
 import { stt } from '@/lib/format'
 import { loadBets, marketTypeOf } from '@/lib/bets'
+import { useToast } from '@/lib/toast-context'
 import type { StoredBet, MarketType } from '@/lib/bets'
 import type { Address } from 'viem'
 
@@ -69,6 +70,7 @@ async function resolveBet(bet: StoredBet, account: Address | null): Promise<{ se
 export function MyBets() {
   const { authenticated } = usePrivy()
   const { wallets } = useWallets()
+  const toast = useToast()
   const privyWallet = wallets.find(w => w.walletClientType === 'privy')
   const account = (privyWallet?.address as Address | undefined) ?? null
 
@@ -109,13 +111,15 @@ export function MyBets() {
       await pub.waitForTransactionReceipt({ hash })
       setClaimStatus(s => ({ ...s, [bet.txHash]: 'done' }))
       setBets(prev => prev.map(b => (b.txHash === bet.txHash ? { ...b, claimable: 0n } : b)))
+      toast.push({ kind: 'success', message: `Claimed ${stt(bet.claimable, 3)} from ${bet.homeTeam} vs ${bet.awayTeam}`, txHash: hash })
     } catch (err) {
       console.error('Claim failed:', err)
       setClaimStatus(s => ({ ...s, [bet.txHash]: 'error' }))
+      toast.push({ kind: 'error', message: 'Claim failed — try again' })
     }
   }
 
-  if (!authenticated || (bets.length === 0 && !loading)) return null
+  if (!authenticated) return null
 
   return (
     <div className="mt-8">
@@ -126,6 +130,10 @@ export function MyBets() {
           {[1, 2].map(i => (
             <div key={i} className="h-14 rounded-xl bg-zinc-900 animate-pulse" />
           ))}
+        </div>
+      ) : bets.length === 0 ? (
+        <div className="bg-card border border-border rounded-xl px-5 py-6 text-center">
+          <p className="text-sm text-zinc-400">No bets yet — pick a match above to get started.</p>
         </div>
       ) : (
         <div className="border border-border rounded-xl overflow-hidden">
@@ -186,7 +194,7 @@ export function MyBets() {
                 ) : (
                   <div className="text-right shrink-0">
                     <div className="text-[11px] text-zinc-600">{bet.league}</div>
-                    <div className="text-[10px] text-zinc-700">
+                    <div className="text-[11px] text-zinc-700">
                       {new Date(bet.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric' })}
                     </div>
                   </div>

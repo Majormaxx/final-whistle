@@ -1,4 +1,6 @@
 import { notFound } from 'next/navigation'
+import Link from 'next/link'
+import { ArrowLeft } from 'lucide-react'
 import { readClient } from '@/lib/sdk'
 import { BetPanel } from '@/components/BetPanel'
 import { NextGoalPanel } from '@/components/NextGoalPanel'
@@ -41,6 +43,14 @@ export default async function MatchPage({ params }: { params: Promise<{ address:
 
   return (
     <div>
+      <Link
+        href="/"
+        className="inline-flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition-colors mb-3"
+      >
+        <ArrowLeft className="w-3.5 h-3.5" strokeWidth={2} />
+        Markets
+      </Link>
+
       {/* Match header */}
       <div className="bg-card border border-border rounded-xl p-6 mb-4">
         <div className="flex items-center justify-between mb-2">
@@ -48,8 +58,8 @@ export default async function MatchPage({ params }: { params: Promise<{ address:
             World Cup Qualification · {kickoffLabel(market.kickoff)}
           </span>
           {isOpen && (
-            <span className="flex items-center gap-1 text-xs text-green-500">
-              <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+            <span className="flex items-center gap-1 text-xs text-red-400">
+              <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
               Live
             </span>
           )}

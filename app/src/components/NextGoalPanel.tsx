@@ -9,14 +9,17 @@ import { somniaTestnet } from '@/lib/chain'
 import { pct, odds } from '@/lib/format'
 import { saveBet } from '@/lib/bets'
 import { classifyBetError, BET_ERROR_MSG } from '@/lib/bet-error'
+import { useToast } from '@/lib/toast-context'
 import type { NextGoalMarketInfo } from '@final-whistle/sdk'
 
-const BET_AMOUNT = '0.005'
+const PRESETS = ['0.005', '0.01', '0.05']
 
 export function NextGoalPanel({ market }: { market: NextGoalMarketInfo }) {
   const { authenticated, login } = usePrivy()
   const { wallets } = useWallets()
+  const toast = useToast()
   const [selected, setSelected] = useState<0 | 1 | null>(null)
+  const [amount, setAmount] = useState(PRESETS[0])
   const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
@@ -40,7 +43,7 @@ export function NextGoalPanel({ market }: { market: NextGoalMarketInfo }) {
         abi: NextGoalMarketAbi,
         functionName: 'bet',
         args: [selected],
-        value: parseEther(BET_AMOUNT),
+        value: parseEther(amount),
       })
       setStatus('done')
       saveBet({
@@ -51,9 +54,10 @@ export function NextGoalPanel({ market }: { market: NextGoalMarketInfo }) {
         awayTeam: 'window',
         league: 'In-play',
         outcome: selected,
-        amount: BET_AMOUNT,
+        amount,
         timestamp: Date.now(),
       })
+      toast.push({ kind: 'success', message: 'Next-goal bet placed — auto-settled when it resolves', txHash: hash })
     } catch (err) {
       const kind = classifyBetError(err)
       if (kind === 'rejected') {
@@ -62,6 +66,7 @@ export function NextGoalPanel({ market }: { market: NextGoalMarketInfo }) {
       }
       setErrorMsg(BET_ERROR_MSG[kind])
       setStatus('error')
+      toast.push({ kind: 'error', message: BET_ERROR_MSG[kind] })
     }
   }
 
@@ -110,18 +115,47 @@ export function NextGoalPanel({ market }: { market: NextGoalMarketInfo }) {
           Sign in to bet
         </button>
       ) : (
-        <button
-          onClick={placeBet}
-          disabled={selected === null || status === 'loading'}
-          className="w-full py-2 bg-green-500 hover:bg-green-400 disabled:opacity-40 text-black font-bold text-sm rounded-lg transition-colors flex items-center justify-center gap-2"
-        >
-          {status === 'loading' ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Placing…
-            </>
-          ) : `Bet ${BET_AMOUNT} STT`}
-        </button>
+        <div className="flex flex-col gap-2">
+          {selected !== null && (
+            <div className="flex gap-1.5">
+              {PRESETS.map(p => (
+                <button
+                  key={p}
+                  onClick={() => setAmount(p)}
+                  className={`flex-1 py-1 text-xs rounded border transition-colors
+                    ${amount === p
+                      ? 'border-green-500/60 bg-green-500/10 text-green-400'
+                      : 'border-zinc-800 text-zinc-500 hover:border-zinc-600 hover:text-zinc-300'
+                    }`}
+                >
+                  {p}
+                </button>
+              ))}
+              <input
+                type="number"
+                value={amount}
+                min="0.001"
+                step="0.001"
+                onChange={e => setAmount(e.target.value)}
+                className="w-20 bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-xs text-white
+                  focus:outline-none focus:border-green-500/60 text-center"
+                placeholder="STT"
+              />
+            </div>
+          )}
+          <button
+            onClick={placeBet}
+            disabled={selected === null || status === 'loading'}
+            className="w-full py-2 bg-green-500 hover:bg-green-400 disabled:opacity-40 text-black font-bold text-sm rounded-lg transition-colors flex items-center justify-center gap-2"
+          >
+            {status === 'loading' ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Placing…
+              </>
+            ) : `Bet ${amount} STT`}
+          </button>
+        </div>
       )}
 
       {status === 'error' && errorMsg && (

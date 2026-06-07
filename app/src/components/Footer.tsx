@@ -39,7 +39,7 @@ export function Footer() {
         <span>·</span>
         <span>Somnia Testnet · Chain 50312</span>
       </div>
-      <p className="text-[10px] text-zinc-700">
+      <p className="text-[11px] text-zinc-700">
         Testnet only. Not financial advice. For demonstration purposes.
       </p>
     </footer>

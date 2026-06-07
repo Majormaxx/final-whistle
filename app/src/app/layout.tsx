@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import './globals.css'
 import { Providers } from '@/components/Providers'
 import { WalletButton } from '@/components/WalletButton'
@@ -17,13 +18,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <Providers>
           <header className="border-b border-border px-6 py-4 flex items-center justify-between sticky top-0 z-10 bg-[#0a0f0a]/95 backdrop-blur-sm">
-            <a href="/" className="flex items-center gap-3">
+            <Link href="/" className="flex items-center gap-3">
               <img src="/logo.svg" alt="Final Whistle" className="h-6 w-auto" />
               <span className="text-white font-medium text-base tracking-tight">Final Whistle</span>
               <span className="text-xs text-zinc-500 bg-card px-2 py-0.5 rounded-full border border-border hidden sm:inline">
                 Somnia Testnet
               </span>
-            </a>
+            </Link>
             <div className="flex items-center gap-3">
               <FaucetButton />
               <WalletButton />

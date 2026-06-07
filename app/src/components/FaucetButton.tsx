@@ -11,7 +11,7 @@ export function FaucetButton() {
   const [state, setState] = useState<State>('idle')
 
   async function drip() {
-    if (!wallet || state !== 'idle') return
+    if (!wallet || (state !== 'idle' && state !== 'error')) return
     setState('loading')
     try {
       const res = await fetch('/api/sponsor', {
@@ -27,7 +27,6 @@ export function FaucetButton() {
       setState('done')
     } catch {
       setState('error')
-      setTimeout(() => setState('idle'), 3000)
     }
   }
 
@@ -46,7 +45,7 @@ export function FaucetButton() {
 
   return (
     <button
-      onClick={state === 'error' ? () => setState('idle') : drip}
+      onClick={drip}
       disabled={disabled}
       className={`px-3 py-1.5 border text-xs rounded-lg transition-colors disabled:opacity-50
         ${green

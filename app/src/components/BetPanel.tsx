@@ -9,6 +9,7 @@ import { somniaTestnet } from '@/lib/chain'
 import { pct, odds, winEstimate } from '@/lib/format'
 import { saveBet } from '@/lib/bets'
 import { classifyBetError, BET_ERROR_MSG } from '@/lib/bet-error'
+import { useToast } from '@/lib/toast-context'
 import type { MatchMarketInfo } from '@final-whistle/sdk'
 
 const OUTCOMES = [
@@ -22,6 +23,7 @@ const PRESETS = ['0.01', '0.05', '0.1', '0.25']
 export function BetPanel({ market }: { market: MatchMarketInfo }) {
   const { authenticated, login } = usePrivy()
   const { wallets } = useWallets()
+  const toast = useToast()
   const [selected, setSelected] = useState<0 | 1 | 2 | null>(null)
   const [amount, setAmount] = useState('0.01')
   const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
@@ -58,6 +60,7 @@ export function BetPanel({ market }: { market: MatchMarketInfo }) {
         amount,
         timestamp: Date.now(),
       })
+      toast.push({ kind: 'success', message: `Bet placed — ${market.homeTeam} vs ${market.awayTeam}`, txHash: hash })
     } catch (err) {
       const kind = classifyBetError(err)
       if (kind === 'rejected') {
@@ -66,6 +69,7 @@ export function BetPanel({ market }: { market: MatchMarketInfo }) {
       }
       setErrorMsg(BET_ERROR_MSG[kind])
       setStatus('error')
+      toast.push({ kind: 'error', message: BET_ERROR_MSG[kind] })
     }
   }
 
