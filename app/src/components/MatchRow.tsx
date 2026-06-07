@@ -67,8 +67,14 @@ export function MatchRow({
   const isClosed = market.status === MarketStatus.Closed
   const isResolved = market.status === MarketStatus.Resolved
   const isBettable = isOpen
+
+  // Trust the fixture feed when it has an answer (handles delays/postponements);
+  // fall back to the on-chain kickoff timestamp when the feed is missing or down —
+  // this is the single place "is it live" gets decided, so the badge can't drift
+  // out of sync with the synthetic-fixture builder in page.tsx.
   const hasKickedOff = Date.now() / 1000 >= Number(market.kickoff)
-  const isLive = isOpen && hasKickedOff
+  const isLive = isOpen && (fixture ? fixture.status === 'live' : hasKickedOff)
+
   const privyWallet = wallets.find(w => w.walletClientType === 'privy')
 
   const hasScore = fixture && (fixture.goals.home !== null || fixture.status === 'finished')
