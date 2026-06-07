@@ -124,7 +124,7 @@ export class Keeper {
     const windowStart = BigInt(Math.floor(Date.now() / 1000))
     const windowEnd   = BigInt(config.kickoffTimestamp + WINDOW_END_BUFFER)
 
-    const { result } = await this.wallet.simulateContract({
+    const { result } = await this.public_.simulateContract({
       account:      this.account,
       address:      config.factoryAddress,
       abi:          MarketFactoryAbi,
