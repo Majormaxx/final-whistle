@@ -67,6 +67,8 @@ export function MatchRow({
   const isClosed = market.status === MarketStatus.Closed
   const isResolved = market.status === MarketStatus.Resolved
   const isBettable = isOpen
+  const hasKickedOff = Date.now() / 1000 >= Number(market.kickoff)
+  const isLive = isOpen && hasKickedOff
   const privyWallet = wallets.find(w => w.walletClientType === 'privy')
 
   const hasScore = fixture && (fixture.goals.home !== null || fixture.status === 'finished')
@@ -129,7 +131,7 @@ export function MatchRow({
       <div className="flex items-center px-4 py-3 gap-3">
         {/* Status + league */}
         <div className="w-16 shrink-0">
-          {isOpen ? (
+          {isLive ? (
             <span className="flex items-center gap-1 text-[11px] text-green-500 font-semibold">
               <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse shrink-0" />
               {fixture?.elapsed != null ? `${fixture.elapsed}'` : 'LIVE'}

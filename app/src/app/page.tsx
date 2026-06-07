@@ -79,7 +79,7 @@ async function MatchList() {
       league: 'World Cup Qualification',
       country: 'World',
       kickoff: Number(liveMarket.kickoff),
-      status: 'live',
+      status: Number(liveMarket.kickoff) * 1000 > Date.now() ? 'scheduled' : 'live',
       elapsed: null,
       goals: { home: null, away: null },
     }
