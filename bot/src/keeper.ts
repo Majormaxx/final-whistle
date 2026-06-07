@@ -2,8 +2,10 @@ import {
   createPublicClient,
   createWalletClient,
   http,
+  parseEventLogs,
   type Address,
   type Hash,
+  type TransactionReceipt,
 } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import {
@@ -346,7 +348,8 @@ export class Keeper {
       console.log('Match market resolved — claiming')
       try {
         const hash = await this.client.claimMatch(config.matchMarketAddress)
-        await this.public_.waitForTransactionReceipt({ hash })
+        const receipt = await this.public_.waitForTransactionReceipt({ hash })
+        this._recordPayout(receipt, MatchMarketAbi)
       } catch (_) { /* nothing to claim */ }
     })
 
@@ -356,10 +359,18 @@ export class Keeper {
         console.log(`Next-goal market ${event.market} resolved — claiming`)
         try {
           const hash = await this.client.claimNextGoal(event.market)
-          await this.public_.waitForTransactionReceipt({ hash })
+          const receipt = await this.public_.waitForTransactionReceipt({ hash })
+          this._recordPayout(receipt, NextGoalMarketAbi)
         } catch (_) { /* nothing to claim */ }
       })
     })
+  }
+
+  private _recordPayout(receipt: TransactionReceipt, abi: typeof MatchMarketAbi | typeof NextGoalMarketAbi): void {
+    const amount = extractPayoutAmount(abi, receipt.logs)
+    if (amount === null) return
+    this.received += amount
+    console.log(`Claimed payout: ${fmt(amount)} STT`)
   }
 
   // ── helpers ───────────────────────────────────────────────────────────
@@ -381,6 +392,19 @@ export class Keeper {
     const sign = net >= 0n ? '+' : '-'
     return `spent=${fmt(this.spent)} received=${fmt(this.received)} net=${sign}${fmt(net < 0n ? -net : net)}`
   }
+}
+
+// claim() emits exactly one PayoutSent(bettor, amount) on success, for
+// msg.sender — read it straight from the receipt logs instead of guessing
+// from a balance delta (which gas costs and concurrent transfers would
+// pollute). Pure and exported so the decode logic is testable without
+// standing up a Keeper (account, RPC clients, live chain).
+export function extractPayoutAmount(
+  abi: typeof MatchMarketAbi | typeof NextGoalMarketAbi,
+  logs: TransactionReceipt['logs'],
+): bigint | null {
+  const [event] = parseEventLogs({ abi, logs, eventName: 'PayoutSent' })
+  return event ? event.args.amount : null
 }
 
 function fmt(wei: bigint): string {
