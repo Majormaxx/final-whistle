@@ -55,7 +55,7 @@ export function AgentActivity({
           push({
             id: `${e.log.transactionHash}-${e.log.logIndex}`,
             text: `${label} resolved — ${RESULT_LABEL[e.result] ?? 'settled'}`,
-            detail: 'Score read on-chain by Somnia Agents',
+            detail: 'Final score confirmed — straight from the source',
             hash: e.log.transactionHash as Hash,
           })
         }),
@@ -73,7 +73,7 @@ export function AgentActivity({
         push({
           id: `${e.log.transactionHash}-${e.log.logIndex}`,
           text: `${isMatch ? 'Full-time score' : 'Goal-window score'} requested from agent`,
-          detail: 'Resolver deposited and asked Somnia Agents to read the live feed',
+          detail: 'Reading the live feed now — result incoming',
           hash: e.log.transactionHash as Hash,
         })
       }),
@@ -95,7 +95,7 @@ export function AgentActivity({
         push({
           id: `${e.log.transactionHash}-${e.log.logIndex}`,
           text: `Paid ${stt(e.amount, 4)} to ${shortAddr(e.bettor)}`,
-          detail: 'Winnings sent automatically — no claim required',
+          detail: "Money's already moving — nothing for you to do",
           hash: e.log.transactionHash as Hash,
         })
       }),
@@ -119,7 +119,7 @@ export function AgentActivity({
     <div className="bg-card border border-border rounded-xl p-5">
       <div className="flex items-center gap-2">
         <Activity className="w-3.5 h-3.5 text-green-400" strokeWidth={2} />
-        <span className="text-sm font-semibold text-zinc-300">Agent activity</span>
+        <span className="text-sm font-semibold text-zinc-300">Live action</span>
         <span className="flex items-center gap-1 text-[11px] text-green-500 ml-auto">
           <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
           Live
@@ -128,7 +128,7 @@ export function AgentActivity({
 
       {feed.length === 0 ? (
         <div className="text-xs text-zinc-600 mt-3">
-          Watching the resolver and on-chain markets — entries appear the instant they land.
+          Every score, every payout — the second it hits the chain.
         </div>
       ) : (
         <div className="mt-3 space-y-2.5">

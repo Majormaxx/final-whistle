@@ -25,7 +25,7 @@ export function Hero() {
         </div>
 
         <p className="text-zinc-400 text-sm max-w-sm">
-          Markets that resolve themselves. When a goal goes in, Somnia Agents read the score on-chain and winners are paid automatically — no operator, no delay.
+          The final whistle blows, the score lands on-chain, your payout&apos;s already in your wallet — no claims, no waiting, no one standing between you and your money.
         </p>
 
         <div className="flex items-center gap-8 text-center">
@@ -48,7 +48,7 @@ export function Hero() {
           onClick={login}
           className="px-8 py-3 bg-green-500 hover:bg-green-400 text-black font-bold text-base rounded-xl transition-colors shadow-lg shadow-green-500/20"
         >
-          Sign in to start betting
+          Sign in — first bet&apos;s on us
         </button>
 
         <p className="text-xs text-zinc-600">

@@ -60,7 +60,7 @@ export function BetPanel({ market }: { market: MatchMarketInfo }) {
         amount,
         timestamp: Date.now(),
       })
-      toast.push({ kind: 'success', message: `Bet placed — ${market.homeTeam} vs ${market.awayTeam}`, txHash: hash })
+      toast.push({ kind: 'success', message: `Bet's down — ${market.homeTeam} vs ${market.awayTeam}. Sit back.`, txHash: hash })
     } catch (err) {
       const kind = classifyBetError(err)
       if (kind === 'rejected') {
@@ -79,8 +79,8 @@ export function BetPanel({ market }: { market: MatchMarketInfo }) {
         <div className="flex justify-center mb-2">
           <Zap className="w-6 h-6 text-green-400" strokeWidth={2} />
         </div>
-        <div className="font-semibold text-white mb-1">Bet placed.</div>
-        <div className="text-sm text-zinc-400">You'll be paid automatically when the match settles.</div>
+        <div className="font-semibold text-white mb-1">You're in.</div>
+        <div className="text-sm text-zinc-400">Payout lands the second the final whistle blows.</div>
         {txHash && (
           <a href={`https://explorer.somnia.network/tx/${txHash}`} target="_blank" rel="noopener noreferrer"
             className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors mt-3 inline-block">

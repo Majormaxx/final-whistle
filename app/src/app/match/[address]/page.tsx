@@ -134,7 +134,7 @@ export default async function MatchPage({ params }: { params: Promise<{ address:
               {RESULT_LABEL[market.result] ?? 'Settled'}
             </div>
             <div className="text-sm text-zinc-400">
-              Resolved by Somnia Agents · {stt(market.pool)} distributed
+              Payouts sent automatically · {stt(market.pool)} distributed
             </div>
           </div>
         )}

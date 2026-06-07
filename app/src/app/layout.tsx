@@ -8,14 +8,14 @@ import { Footer } from '@/components/Footer'
 
 export const metadata: Metadata = {
   title: 'Final Whistle',
-  description: 'Markets that settle themselves. Soccer first.',
+  description: 'Bet on football. Get paid the moment the final whistle blows.',
   icons: { icon: '/logo.svg' },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>
+      <body className="min-h-screen flex flex-col">
         <Providers>
           <header className="border-b border-border px-6 py-4 flex items-center justify-between sticky top-0 z-10 bg-[#0a0f0a]/95 backdrop-blur-sm">
             <Link href="/" className="flex items-center gap-3">
@@ -30,7 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <WalletButton />
             </div>
           </header>
-          <main className="max-w-3xl mx-auto px-4 py-8">{children}</main>
+          <main className="flex-1 max-w-3xl w-full mx-auto px-4 py-8">{children}</main>
           <Footer />
         </Providers>
       </body>

@@ -6,6 +6,8 @@ import { FixtureRow } from '@/components/FixtureRow'
 import { Hero } from '@/components/Hero'
 import { FirstActionGuide } from '@/components/FirstActionGuide'
 import { MyBets } from '@/components/MyBets'
+import { AgentActivity } from '@/components/AgentActivity'
+import { MarketStatus } from '@final-whistle/sdk'
 import type { MatchMarketInfo } from '@final-whistle/sdk'
 import type { Fixture } from '@/lib/fixtures'
 import type { Address } from 'viem'
@@ -66,6 +68,12 @@ async function MatchList() {
     getTodayFixtures(MAX_ROWS),
   ])
 
+  const liveWindows = liveMarket
+    ? await Promise.all(
+        (await readClient.getNextGoalMarkets(liveMarket.marketId)).map(a => readClient.getNextGoalMarket(a))
+      )
+    : []
+
   const rows: Row[] = []
 
   if (liveMarket) {
@@ -98,29 +106,41 @@ async function MatchList() {
     return (
       <div className="text-center py-20 text-zinc-600">
         <div className="text-5xl mb-4">⚽</div>
-        <div className="text-sm">No matches today.</div>
+        <div className="text-sm">Nothing kicking off today — check back soon.</div>
       </div>
     )
   }
 
   return (
-    <div className="border border-border rounded-xl overflow-hidden">
-      <div className="bg-zinc-900/60 px-4 py-2 flex items-center justify-between text-[11px] uppercase tracking-widest text-zinc-500 font-medium border-b border-border">
-        <span>Match</span>
-        <div className="flex gap-1.5 items-center pr-9">
-          <span className="w-14 text-center">1</span>
-          <span className="w-14 text-center">X</span>
-          <span className="w-14 text-center">2</span>
+    <>
+      <div className="border border-border rounded-xl overflow-hidden">
+        <div className="bg-zinc-900/60 px-4 py-2 flex items-center justify-between text-[11px] uppercase tracking-widest text-zinc-500 font-medium border-b border-border">
+          <span>Match</span>
+          <div className="flex gap-1.5 items-center pr-9">
+            <span className="w-14 text-center">1</span>
+            <span className="w-14 text-center">X</span>
+            <span className="w-14 text-center">2</span>
+          </div>
         </div>
+        {rows.map((row, i) => {
+          const isLast = i === rows.length - 1
+          if (row.type === 'market') {
+            return <MatchRow key={row.fixture.id} market={row.market} fixture={row.fixture} isLast={isLast} />
+          }
+          return <FixtureRow key={row.fixture.id} fixture={row.fixture} isLast={isLast} />
+        })}
       </div>
-      {rows.map((row, i) => {
-        const isLast = i === rows.length - 1
-        if (row.type === 'market') {
-          return <MatchRow key={row.fixture.id} market={row.market} fixture={row.fixture} isLast={isLast} />
-        }
-        return <FixtureRow key={row.fixture.id} fixture={row.fixture} isLast={isLast} />
-      })}
-    </div>
+
+      {liveMarket?.status === MarketStatus.Open && (
+        <div className="mt-4">
+          <AgentActivity
+            matchAddress={liveMarket.address}
+            parentMatchId={liveMarket.marketId}
+            initialWindows={liveWindows}
+          />
+        </div>
+      )}
+    </>
   )
 }
 
@@ -132,7 +152,7 @@ export default function Home() {
 
       <div className="mb-6">
         <h1 className="text-xl font-bold text-white">Today's matches</h1>
-        <p className="text-zinc-500 text-sm mt-0.5">Live markets settle on-chain when goals are scored.</p>
+        <p className="text-zinc-500 text-sm mt-0.5">Goal goes in, payout goes out — automatically, on-chain.</p>
       </div>
 
       <Suspense fallback={<MatchListSkeleton />}>

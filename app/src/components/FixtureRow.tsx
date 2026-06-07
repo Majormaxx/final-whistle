@@ -1,17 +1,7 @@
 'use client'
 
+import { TeamLogo } from '@/components/TeamLogo'
 import type { Fixture } from '@/lib/fixtures'
-
-function TeamLogo({ src, alt }: { src: string | null; alt: string }) {
-  if (!src) return <div className="w-5 h-5 rounded-full bg-zinc-800 shrink-0" />
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src={src} alt={alt} width={20} height={20}
-      className="w-5 h-5 object-contain shrink-0"
-      onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
-    />
-  )
-}
 
 function timeLabel(f: Fixture): string {
   if (f.status === 'live' && f.elapsed != null) return `${f.elapsed}'`

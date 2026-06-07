@@ -50,7 +50,7 @@ export function FirstActionGuide() {
     { label: 'Signed in', state: 'done' },
     { label: 'Get testnet STT', state: funded ? 'done' : 'active', action: !funded ? <FaucetButton /> : undefined },
     { label: 'Place your first bet', state: funded ? 'active' : 'upcoming' },
-    { label: 'Watch Somnia Agents resolve it', state: 'upcoming' },
+    { label: 'Watch it settle itself — automatically', state: 'upcoming' },
   ]
 
   return (

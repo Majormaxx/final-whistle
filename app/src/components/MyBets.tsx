@@ -133,7 +133,7 @@ export function MyBets() {
         </div>
       ) : bets.length === 0 ? (
         <div className="bg-card border border-border rounded-xl px-5 py-6 text-center">
-          <p className="text-sm text-zinc-400">No bets yet — pick a match above to get started.</p>
+          <p className="text-sm text-zinc-400">Nothing on the board yet — pick a match above and get in the game.</p>
         </div>
       ) : (
         <div className="border border-border rounded-xl overflow-hidden">

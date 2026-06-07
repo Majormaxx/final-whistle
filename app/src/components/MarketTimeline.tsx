@@ -11,7 +11,7 @@ function rowMeta(w: NextGoalMarketInfo): { dot: string; label: string; detail: s
     return { dot: 'bg-green-500 animate-pulse', label: 'Live', detail: 'Betting open — resolves on the next goal or window close' }
   }
   if (w.status === MarketStatus.Closed) {
-    return { dot: 'bg-amber-500', label: 'Closed', detail: 'Awaiting agent resolution' }
+    return { dot: 'bg-amber-500', label: 'Closed', detail: 'Reading the score now — result incoming' }
   }
   if (w.status === MarketStatus.Cancelled) {
     return { dot: 'bg-zinc-600', label: 'Cancelled', detail: 'Window cancelled — stakes refundable' }

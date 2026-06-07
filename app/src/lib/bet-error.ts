@@ -9,7 +9,7 @@ export function classifyBetError(err: unknown): BetErrorKind {
 }
 
 export const BET_ERROR_MSG: Record<Exclude<BetErrorKind, 'rejected'>, string> = {
-  funds:   'Insufficient balance — get STT from the faucet',
+  funds:   'Not enough STT — grab some from the faucet above',
   network: 'Network error — try again',
   unknown: 'Transaction failed — try again',
 }

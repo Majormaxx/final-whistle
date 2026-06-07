@@ -57,7 +57,7 @@ export function NextGoalPanel({ market }: { market: NextGoalMarketInfo }) {
         amount,
         timestamp: Date.now(),
       })
-      toast.push({ kind: 'success', message: 'Next-goal bet placed — auto-settled when it resolves', txHash: hash })
+      toast.push({ kind: 'success', message: "You're in — next goal settles it, automatically", txHash: hash })
     } catch (err) {
       const kind = classifyBetError(err)
       if (kind === 'rejected') {
@@ -108,7 +108,7 @@ export function NextGoalPanel({ market }: { market: NextGoalMarketInfo }) {
       {status === 'done' ? (
         <div className="flex items-center justify-center gap-1.5 py-2 text-sm text-green-400">
           <Zap className="w-3.5 h-3.5" strokeWidth={2.5} />
-          Bet placed — auto-settled on next goal
+          You're in — next goal settles it, automatically
         </div>
       ) : !authenticated ? (
         <button onClick={login} className="w-full py-2 bg-green-500 hover:bg-green-400 text-black font-bold text-sm rounded-lg transition-colors">

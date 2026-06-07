@@ -12,6 +12,7 @@ import { odds, pct, winEstimate, kickoffLabel } from '@/lib/format'
 import { saveBet } from '@/lib/bets'
 import { classifyBetError, BET_ERROR_MSG } from '@/lib/bet-error'
 import { useToast } from '@/lib/toast-context'
+import { TeamLogo } from '@/components/TeamLogo'
 import type { MatchMarketInfo } from '@final-whistle/sdk'
 import type { Fixture } from '@/lib/fixtures'
 
@@ -119,7 +120,7 @@ export function MatchRow({
         amount,
         timestamp: Date.now(),
       })
-      toast.push({ kind: 'success', message: `Bet placed — ${market.homeTeam} vs ${market.awayTeam}`, txHash: hash })
+      toast.push({ kind: 'success', message: `Bet's down — ${market.homeTeam} vs ${market.awayTeam}. Sit back.`, txHash: hash })
     } catch (err) {
       const kind = classifyBetError(err)
       if (kind === 'rejected') {
@@ -175,17 +176,11 @@ export function MatchRow({
           <div className="flex items-center gap-2">
             <div className="flex-1 min-w-0 space-y-0.5">
               <div className="flex items-center gap-1.5">
-                {fixture?.homeLogo && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={fixture.homeLogo} alt="" width={18} height={18} className="w-[18px] h-[18px] object-contain shrink-0" />
-                )}
+                <TeamLogo src={fixture?.homeLogo ?? null} alt={market.homeTeam} />
                 <span className="text-sm font-semibold text-white truncate">{market.homeTeam}</span>
               </div>
               <div className="flex items-center gap-1.5">
-                {fixture?.awayLogo && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={fixture.awayLogo} alt="" width={18} height={18} className="w-[18px] h-[18px] object-contain shrink-0" />
-                )}
+                <TeamLogo src={fixture?.awayLogo ?? null} alt={market.awayTeam} />
                 <span className="text-sm text-zinc-400 truncate">{market.awayTeam}</span>
               </div>
             </div>
@@ -257,7 +252,7 @@ export function MatchRow({
             <div className="flex items-center justify-between">
               <span className="flex items-center gap-1.5 text-sm text-green-400 font-medium">
                 <Zap className="w-3.5 h-3.5" strokeWidth={2.5} />
-                Bet placed. Paid automatically when it settles.
+                You're in. Payout lands the second the final whistle blows.
               </span>
               {txHash && (
                 <a

@@ -36,6 +36,7 @@ bot/dist/
 app/node_modules/
 app/.next/
 app/dist/
+app/tsconfig.tsbuildinfo
 
 # Misc
 .DS_Store
