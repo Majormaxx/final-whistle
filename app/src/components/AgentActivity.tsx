@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Activity } from 'lucide-react'
 import { readClient } from '@/lib/sdk'
 import { MatchMarketAbi, NextGoalMarketAbi, Outcome } from '@final-whistle/sdk'
@@ -23,6 +23,12 @@ const RESULT_LABEL: Record<number, string> = {
   [Outcome.No]: 'No goal',
 }
 
+// BetPlaced.outcome is a raw contract index (0/1/2 and 0/1), NOT the Outcome
+// enum above — these mirror the label arrays already used in BetPanel /
+// NextGoalPanel so a "1" reads as "Draw" here exactly like it does there.
+const MATCH_BET_LABEL = ['Home win', 'Draw', 'Away win']
+const GOAL_BET_LABEL = ['Yes', 'No']
+
 const MAX_ENTRIES = 12
 
 // Live, on-chain narration of the resolver doing its job — only meaningful
@@ -43,6 +49,11 @@ export function AgentActivity({
     const tracked = new Set<Address>([matchAddress.toLowerCase() as Address])
     let windowCount = initialWindows.length
     const unsubs: (() => void)[] = []
+    // ResolutionFailed only carries a requestId, not a market address — the
+    // resolver itself correlates the two via its ResolutionJob bookkeeping,
+    // so we mirror that here from the ResolutionInitiated stream to know
+    // whether a failure belongs to a market we're tracking.
+    const reqIdToMarket = new Map<bigint, Address>()
 
     function push(entry: FeedEntry) {
       setFeed(prev => (prev.some(e => e.id === entry.id) ? prev : [entry, ...prev].slice(0, MAX_ENTRIES)))
@@ -60,6 +71,16 @@ export function AgentActivity({
           })
         }),
       )
+      unsubs.push(
+        readClient.watchBetsPlaced(address, NextGoalMarketAbi, (e) => {
+          push({
+            id: `${e.log.transactionHash}-${e.log.logIndex}`,
+            text: `${stt(e.cost, 3)} on ${GOAL_BET_LABEL[e.outcome] ?? 'a side'} — ${label}`,
+            detail: `${shortAddr(e.bettor)} just staked it — odds just moved`,
+            hash: e.log.transactionHash as Hash,
+          })
+        }),
+      )
     }
 
     ;[...initialWindows]
@@ -68,12 +89,40 @@ export function AgentActivity({
 
     unsubs.push(
       readClient.watchResolutionInitiated((e) => {
-        if (!tracked.has(e.market.toLowerCase() as Address)) return
-        const isMatch = e.market.toLowerCase() === matchAddress.toLowerCase()
+        const market = e.market.toLowerCase() as Address
+        reqIdToMarket.set(e.homeReqId, market)
+        reqIdToMarket.set(e.awayReqId, market)
+        if (!tracked.has(market)) return
+        const isMatch = market === matchAddress.toLowerCase()
         push({
           id: `${e.log.transactionHash}-${e.log.logIndex}`,
           text: `${isMatch ? 'Full-time score' : 'Goal-window score'} requested from agent`,
           detail: 'Reading the live feed now — result incoming',
+          hash: e.log.transactionHash as Hash,
+        })
+      }),
+    )
+
+    unsubs.push(
+      readClient.watchResolutionFailed((e) => {
+        const market = reqIdToMarket.get(e.requestId)
+        if (!market || !tracked.has(market)) return
+        push({
+          id: `${e.log.transactionHash}-${e.log.logIndex}`,
+          text: 'Agent response came back unclear — escalating to the safety net',
+          detail: 'Funds stay put — a 2-of-3 multisig steps in next',
+          hash: e.log.transactionHash as Hash,
+        })
+      }),
+    )
+
+    unsubs.push(
+      readClient.watchEmergencyResolved((e) => {
+        if (!tracked.has(e.market.toLowerCase() as Address)) return
+        push({
+          id: `${e.log.transactionHash}-${e.log.logIndex}`,
+          text: `Resolved by emergency multisig — ${RESULT_LABEL[e.result] ?? 'settled'}`,
+          detail: 'Funds were never at risk — a human-backed safety net stepped in',
           hash: e.log.transactionHash as Hash,
         })
       }),
@@ -102,10 +151,32 @@ export function AgentActivity({
     )
 
     unsubs.push(
+      readClient.watchBetsPlaced(matchAddress, MatchMarketAbi, (e) => {
+        push({
+          id: `${e.log.transactionHash}-${e.log.logIndex}`,
+          text: `${stt(e.cost, 3)} on ${MATCH_BET_LABEL[e.outcome] ?? 'a side'}`,
+          detail: `${shortAddr(e.bettor)} just staked it — odds just moved`,
+          hash: e.log.transactionHash as Hash,
+        })
+      }),
+    )
+
+    unsubs.push(
       readClient.watchNextGoalMarketCreated((e) => {
         if (e.parentMatchId.toLowerCase() !== parentMatchId.toLowerCase()) return
         windowCount += 1
         watchWindow(e.market, `Window ${windowCount}`)
+      }),
+    )
+
+    unsubs.push(
+      readClient.watchMatchMarketCreated((e) => {
+        push({
+          id: `${e.log.transactionHash}-${e.log.logIndex}`,
+          text: `New match market opened — ${e.homeTeam} vs ${e.awayTeam}`,
+          detail: 'Markets open the moment the fixture goes live',
+          hash: e.log.transactionHash as Hash,
+        })
       }),
     )
 

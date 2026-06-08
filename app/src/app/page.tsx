@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import { readClient } from '@/lib/sdk'
+import { readClient, SEEDED } from '@/lib/sdk'
 import { getTodayFixtures } from '@/lib/fixtures'
 import { MatchRow } from '@/components/MatchRow'
 import { FixtureRow } from '@/components/FixtureRow'
@@ -7,15 +7,13 @@ import { Hero } from '@/components/Hero'
 import { FirstActionGuide } from '@/components/FirstActionGuide'
 import { MyBets } from '@/components/MyBets'
 import { AgentActivity } from '@/components/AgentActivity'
+import { PlatformStats } from '@/components/PlatformStats'
 import { MarketStatus } from '@final-whistle/sdk'
 import type { MatchMarketInfo } from '@final-whistle/sdk'
 import type { Fixture } from '@/lib/fixtures'
-import type { Address } from 'viem'
 
 export const revalidate = 60
 
-const SEEDED          = (process.env.NEXT_PUBLIC_SEEDED_MARKETS ?? '')
-  .split(',').map(a => a.trim().toLowerCase()).filter(Boolean) as Address[]
 const LIVE_FIXTURE_ID = Number(process.env.NEXT_PUBLIC_LIVE_FIXTURE_ID ?? 0)
 const MAX_ROWS        = 5
 
@@ -149,6 +147,10 @@ export default function Home() {
     <div>
       <Hero />
       <FirstActionGuide />
+
+      <Suspense fallback={null}>
+        <PlatformStats />
+      </Suspense>
 
       <div className="mb-6">
         <h1 className="text-xl font-bold text-white">Today's matches</h1>

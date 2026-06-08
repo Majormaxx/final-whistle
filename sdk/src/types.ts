@@ -18,6 +18,14 @@ export enum Outcome {
   No   = 5,
 }
 
+export enum ResponseStatus {
+  None     = 0,
+  Pending  = 1,
+  Success  = 2,
+  Failed   = 3,
+  TimedOut = 4,
+}
+
 // ── market types ──────────────────────────────────────────────────────────
 
 export interface MatchMarketInfo {
@@ -90,6 +98,18 @@ export interface ResolutionInitiatedEvent {
 export interface PayoutSentEvent {
   bettor: Address
   amount: bigint
+  log: Log
+}
+
+export interface ResolutionFailedEvent {
+  requestId: bigint
+  status: ResponseStatus
+  log: Log
+}
+
+export interface EmergencyResolvedEvent {
+  market: Address
+  result: Outcome
   log: Log
 }
 

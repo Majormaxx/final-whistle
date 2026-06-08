@@ -97,9 +97,9 @@ export default async function MatchPage({ params }: { params: Promise<{ address:
             </div>
           </div>
           <div className="flex justify-between text-xs text-zinc-500 mt-1.5 px-0.5">
-            <span>Home {p0}%</span>
-            <span>Draw {p1}%</span>
-            <span>Away {p2}%</span>
+            <span>Home {p0}% · {stt(market.quantities[0], 2)}</span>
+            <span>Draw {p1}% · {stt(market.quantities[1], 2)}</span>
+            <span>Away {p2}% · {stt(market.quantities[2], 2)}</span>
           </div>
         </div>
 

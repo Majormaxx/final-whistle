@@ -24,10 +24,12 @@ import type {
   BetPlacedEvent,
   MarketResolvedEvent,
   ResolutionInitiatedEvent,
+  ResolutionFailedEvent,
+  EmergencyResolvedEvent,
   PayoutSentEvent,
   BetEstimate,
 } from './types.js'
-import { MarketStatus, Outcome } from './types.js'
+import { MarketStatus, Outcome, ResponseStatus } from './types.js'
 
 export class FinalWhistleClient {
   readonly public: PublicClient
@@ -473,6 +475,52 @@ export class FinalWhistleClient {
             market: args.market,
             homeReqId: args.homeReqId,
             awayReqId: args.awayReqId,
+            log: log as Log,
+          })
+        }
+      },
+    })
+  }
+
+  // Fires when an agent platform response comes back as anything other than
+  // success — the moment the safety net starts paying attention.
+  watchResolutionFailed(
+    onEvent: (event: ResolutionFailedEvent) => void,
+  ): () => void {
+    this._requireResolver()
+    return this.public.watchContractEvent({
+      address: this.resolverAddress!,
+      abi: ResolverAgentAbi,
+      eventName: 'ResolutionFailed',
+      onLogs: (logs) => {
+        for (const log of logs) {
+          const args = log.args as any
+          onEvent({
+            requestId: args.requestId,
+            status: Number(args.status) as ResponseStatus,
+            log: log as Log,
+          })
+        }
+      },
+    })
+  }
+
+  // Fires when the 2-of-3 multisig steps in to settle a market the agent
+  // platform couldn't — the on-chain proof that funds are never stuck.
+  watchEmergencyResolved(
+    onEvent: (event: EmergencyResolvedEvent) => void,
+  ): () => void {
+    this._requireResolver()
+    return this.public.watchContractEvent({
+      address: this.resolverAddress!,
+      abi: ResolverAgentAbi,
+      eventName: 'EmergencyResolved',
+      onLogs: (logs) => {
+        for (const log of logs) {
+          const args = log.args as any
+          onEvent({
+            market: args.market,
+            result: Number(args.result) as Outcome,
             log: log as Log,
           })
         }

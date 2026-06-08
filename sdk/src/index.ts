@@ -5,6 +5,7 @@ export { FinalWhistleClient } from './client.js'
 export {
   MarketStatus,
   Outcome,
+  ResponseStatus,
   type FinalWhistleConfig,
   type MatchMarketInfo,
   type NextGoalMarketInfo,
@@ -13,6 +14,8 @@ export {
   type BetPlacedEvent,
   type MarketResolvedEvent,
   type ResolutionInitiatedEvent,
+  type ResolutionFailedEvent,
+  type EmergencyResolvedEvent,
   type PayoutSentEvent,
   type BetEstimate,
 } from './types.js'
