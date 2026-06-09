@@ -4,6 +4,8 @@ Self-resolving prediction markets on Somnia. Markets settle themselves — smart
 
 No dispute panel. No resolution queue. The market reads the world itself.
 
+**Live**: [app-pearl-seven-19.vercel.app](https://app-pearl-seven-19.vercel.app)
+
 ## Architecture
 
 ```
@@ -21,6 +23,9 @@ bot/         Demo trader bot — programmatic SDK usage, live PnL
 - **ResolverAgent** — calls Somnia Agents platform, writes consensus result on-chain
 
 Network: Somnia Testnet (chain ID 50312)
+
+- ResolverAgent: `0x0FEb20D1705307F610DB6284ADECA9FA89a41DA0`
+- MarketFactory: `0x22d0081678Fe1E47cde6fd85512C6BFaB3849BF7`
 
 ## Quickstart
 
