@@ -24,8 +24,7 @@ contracts/out/
 contracts/broadcast/
 contracts/lib/
 
-# SDK build output
-sdk/dist/
+# SDK build output (dist committed so Vercel can import without a separate build step)
 sdk/node_modules/
 
 # Bot
