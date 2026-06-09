@@ -1,18 +1,21 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
-import { readClient } from '@/lib/sdk'
+import { readClient, SEEDED } from '@/lib/sdk'
+import { getTodayFixtures } from '@/lib/fixtures'
 import { BetPanel } from '@/components/BetPanel'
 import { NextGoalPanel } from '@/components/NextGoalPanel'
 import { MarketTimeline } from '@/components/MarketTimeline'
 import { AgentActivity } from '@/components/AgentActivity'
 import { StatsBanner } from '@/components/StatsBanner'
-import { pct, stt, kickoffLabel } from '@/lib/format'
+import { pct, stt, kickoffLabel, countdownLabel, matchPhase } from '@/lib/format'
 import { MarketStatus, Outcome } from '@final-whistle/sdk'
 import { isAddress } from 'viem'
 import type { Address } from 'viem'
 
 export const revalidate = 5
+
+const LIVE_FIXTURE_ID = Number(process.env.NEXT_PUBLIC_LIVE_FIXTURE_ID ?? 0)
 
 const RESULT_LABEL: Record<number, string> = {
   [Outcome.Home]: 'Home won',
@@ -37,9 +40,19 @@ export default async function MatchPage({ params }: { params: Promise<{ address:
   )
   const openWindows = nextGoalMarkets.filter(m => m.status === MarketStatus.Open)
 
+  // The app only knows one fixture↔market pairing (NEXT_PUBLIC_LIVE_FIXTURE_ID
+  // ↔ SEEDED[0]) — fetching for any other address would be a guess, and a
+  // wasted call against an already-rate-limited API for matches that don't
+  // need live score tracking anyway.
+  const fixture = SEEDED[0]?.toLowerCase() === address.toLowerCase()
+    ? (await getTodayFixtures(5)).find(f => f.id === LIVE_FIXTURE_ID) ?? null
+    : null
+  const phase = matchPhase(market, fixture)
+
   const [p0, p1, p2] = market.prices.map(pct)
   const isOpen = market.status === MarketStatus.Open
   const isResolved = market.status === MarketStatus.Resolved
+  const liveScore = phase === 'live' && fixture?.goals.home != null ? fixture.goals : null
 
   return (
     <div>
@@ -57,15 +70,20 @@ export default async function MatchPage({ params }: { params: Promise<{ address:
           <span className="text-xs text-zinc-500">
             World Cup Qualification · {kickoffLabel(market.kickoff)}
           </span>
-          {isOpen && (
-            <span className="flex items-center gap-1 text-xs text-red-400">
-              <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
-              Live
+          {phase === 'pre' && (
+            <span className="text-xs text-zinc-500">
+              Kicks off {countdownLabel(market.kickoff)}
             </span>
           )}
-          {isResolved && (
+          {phase === 'live' && (
+            <span className="flex items-center gap-1 text-xs text-red-400">
+              <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
+              {fixture?.elapsed != null ? `${fixture.elapsed}'` : 'Live'}
+            </span>
+          )}
+          {phase === 'finished' && (
             <span className="text-xs text-zinc-400">
-              Settled · {RESULT_LABEL[market.result] ?? '—'}
+              {isResolved ? `Settled · ${RESULT_LABEL[market.result] ?? '—'}` : 'Settling…'}
             </span>
           )}
         </div>
@@ -74,7 +92,13 @@ export default async function MatchPage({ params }: { params: Promise<{ address:
           <div className="text-center flex-1">
             <div className="text-xl font-bold text-white">{market.homeTeam}</div>
           </div>
-          <div className="text-zinc-600 font-light text-lg px-6">vs</div>
+          {liveScore ? (
+            <div className="text-2xl font-bold text-white px-6 tabular-nums">
+              {liveScore.home} – {liveScore.away}
+            </div>
+          ) : (
+            <div className="text-zinc-600 font-light text-lg px-6">vs</div>
+          )}
           <div className="text-center flex-1">
             <div className="text-xl font-bold text-white">{market.awayTeam}</div>
           </div>
@@ -120,7 +144,7 @@ export default async function MatchPage({ params }: { params: Promise<{ address:
           <NextGoalPanel key={w.address} market={w} />
         ))}
 
-        {isOpen && (
+        {phase === 'live' && (
           <AgentActivity
             matchAddress={market.address}
             parentMatchId={market.marketId}

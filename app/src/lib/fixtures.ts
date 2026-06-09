@@ -44,13 +44,13 @@ export type Fixture = {
   goals: { home: number | null; away: number | null }
 }
 
-export async function getTodayFixtures(limit = 5): Promise<Fixture[]> {
-  if (!SPORTS_KEY) return []
-
-  const today = new Date().toISOString().slice(0, 10)
+// Shared fetch+filter+map for a single date — sorted by league priority, then
+// kickoff. Each call independently try/catches so one rate-limited or
+// off-window date contributes nothing rather than failing a whole batch.
+async function fetchFixturesForDate(date: string): Promise<Fixture[]> {
   let res: Response
   try {
-    res = await fetch(`https://v3.football.api-sports.io/fixtures?date=${today}`, {
+    res = await fetch(`https://v3.football.api-sports.io/fixtures?date=${date}`, {
       headers: { 'x-apisports-key': SPORTS_KEY },
       next: { revalidate: 60 },
     })
@@ -64,39 +64,62 @@ export async function getTodayFixtures(limit = 5): Promise<Fixture[]> {
 
   const priorityMap = new Map(LEAGUE_PRIORITY.map((id, i) => [id, i]))
 
-  const sorted = rows
+  return rows
     .filter(r =>
       priorityMap.has(r.league.id) &&
       !CANCEL_STATUSES.has(r.fixture.status.short)
     )
     .sort((a, b) => {
-      // Live first
-      const aLive = LIVE_STATUSES.has(a.fixture.status.short) ? 0 : 1
-      const bLive = LIVE_STATUSES.has(b.fixture.status.short) ? 0 : 1
-      if (aLive !== bLive) return aLive - bLive
-      // Then by league priority
       const pa = priorityMap.get(a.league.id) ?? 99
       const pb = priorityMap.get(b.league.id) ?? 99
       if (pa !== pb) return pa - pb
-      // Within same league, sort by kickoff (earlier first)
       return a.fixture.timestamp - b.fixture.timestamp
     })
-    .slice(0, limit)
+    .map(r => ({
+      id: r.fixture.id,
+      homeTeam: r.teams.home.name,
+      awayTeam: r.teams.away.name,
+      homeLogo: r.teams.home.logo ?? null,
+      awayLogo: r.teams.away.logo ?? null,
+      leagueLogo: r.league.logo ?? null,
+      league: r.league.name,
+      country: r.league.country,
+      kickoff: Math.floor(new Date(r.fixture.date).getTime() / 1000),
+      status: LIVE_STATUSES.has(r.fixture.status.short) ? 'live'
+            : DONE_STATUSES.has(r.fixture.status.short) ? 'finished'
+            : 'scheduled',
+      elapsed: r.fixture.status.elapsed ?? null,
+      goals: { home: r.goals.home, away: r.goals.away },
+    }))
+}
 
-  return sorted.map(r => ({
-    id: r.fixture.id,
-    homeTeam: r.teams.home.name,
-    awayTeam: r.teams.away.name,
-    homeLogo: r.teams.home.logo ?? null,
-    awayLogo: r.teams.away.logo ?? null,
-    leagueLogo: r.league.logo ?? null,
-    league: r.league.name,
-    country: r.league.country,
-    kickoff: Math.floor(new Date(r.fixture.date).getTime() / 1000),
-    status: LIVE_STATUSES.has(r.fixture.status.short) ? 'live'
-          : DONE_STATUSES.has(r.fixture.status.short) ? 'finished'
-          : 'scheduled',
-    elapsed: r.fixture.status.elapsed ?? null,
-    goals: { home: r.goals.home, away: r.goals.away },
-  }))
+export async function getTodayFixtures(limit = 5): Promise<Fixture[]> {
+  if (!SPORTS_KEY) return []
+
+  const today = new Date().toISOString().slice(0, 10)
+  const fixtures = await fetchFixturesForDate(today)
+
+  // Live first, stable otherwise — preserves the league-priority/kickoff
+  // order already applied per group.
+  return [...fixtures]
+    .sort((a, b) => (a.status === 'live' ? 0 : 1) - (b.status === 'live' ? 0 : 1))
+    .slice(0, limit)
+}
+
+// Browses forward from today across as many days as the plan's rolling
+// window actually serves (the free tier covers ~3 days — querying further
+// just returns an off-window error that fetchFixturesForDate swallows).
+// Each date's fixtures stay grouped and internally sorted — exactly what a
+// day-by-day browser needs — then the whole run is capped at `limit`.
+export async function getFixturesForDays(days: number, limit: number): Promise<Fixture[]> {
+  if (!SPORTS_KEY) return []
+
+  const dates = Array.from({ length: days }, (_, i) => {
+    const d = new Date()
+    d.setUTCDate(d.getUTCDate() + i)
+    return d.toISOString().slice(0, 10)
+  })
+
+  const batches = await Promise.all(dates.map(fetchFixturesForDate))
+  return batches.flat().slice(0, limit)
 }

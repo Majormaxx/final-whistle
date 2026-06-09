@@ -8,7 +8,7 @@ import { usePrivy, useWallets } from '@privy-io/react-auth'
 import { createWalletClient, custom, parseEther } from 'viem'
 import { MatchMarketAbi, MarketStatus } from '@final-whistle/sdk'
 import { somniaTestnet } from '@/lib/chain'
-import { odds, pct, winEstimate, kickoffLabel } from '@/lib/format'
+import { odds, pct, winEstimate, kickoffLabel, matchPhase } from '@/lib/format'
 import { saveBet } from '@/lib/bets'
 import { classifyBetError, BET_ERROR_MSG } from '@/lib/bet-error'
 import { useToast } from '@/lib/toast-context'
@@ -73,12 +73,7 @@ export function MatchRow({
   const isResolved = market.status === MarketStatus.Resolved
   const isBettable = isOpen
 
-  // Trust the fixture feed when it has an answer (handles delays/postponements);
-  // fall back to the on-chain kickoff timestamp when the feed is missing or down —
-  // this is the single place "is it live" gets decided, so the badge can't drift
-  // out of sync with the synthetic-fixture builder in page.tsx.
-  const hasKickedOff = Date.now() / 1000 >= Number(market.kickoff)
-  const isLive = isOpen && (fixture ? fixture.status === 'live' : hasKickedOff)
+  const isLive = isOpen && matchPhase(market, fixture) === 'live'
 
   const privyWallet = wallets.find(w => w.walletClientType === 'privy')
 

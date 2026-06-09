@@ -8,8 +8,11 @@ import { FirstActionGuide } from '@/components/FirstActionGuide'
 import { MyBets } from '@/components/MyBets'
 import { AgentActivity } from '@/components/AgentActivity'
 import { PlatformStats } from '@/components/PlatformStats'
+import { FeaturedReplay } from '@/components/FeaturedReplay'
+import { FixturesPanel } from '@/components/FixturesPanel'
+import { matchPhase } from '@/lib/format'
 import { MarketStatus } from '@final-whistle/sdk'
-import type { MatchMarketInfo } from '@final-whistle/sdk'
+import type { MatchMarketInfo, NextGoalMarketInfo } from '@final-whistle/sdk'
 import type { Fixture } from '@/lib/fixtures'
 
 export const revalidate = 60
@@ -24,6 +27,21 @@ type Row =
 async function getLiveMarket(): Promise<MatchMarketInfo | null> {
   if (!SEEDED[0]) return null
   try { return await readClient.getMatchMarket(SEEDED[0]) } catch { return null }
+}
+
+// The proof source for the cold state — the most recently resolved match
+// across every seeded market, independent of whichever one is currently
+// "live" (that one might be pre-match with nothing to replay yet). Same
+// fetch-and-filter shape as PlatformStats.
+async function getReplayMatch(): Promise<{ market: MatchMarketInfo; windows: NextGoalMarketInfo[] } | null> {
+  const markets = await Promise.all(SEEDED.map(a => readClient.getMatchMarket(a).catch(() => null)))
+  const resolved = markets.filter((m): m is MatchMarketInfo => m !== null && m.status === MarketStatus.Resolved)
+  if (resolved.length === 0) return null
+  const market = resolved.reduce((a, b) => (a.kickoff > b.kickoff ? a : b))
+  const windows = await Promise.all(
+    (await readClient.getNextGoalMarkets(market.marketId)).map(a => readClient.getNextGoalMarket(a))
+  )
+  return { market, windows }
 }
 
 function MatchListSkeleton() {
@@ -72,10 +90,16 @@ async function MatchList() {
       )
     : []
 
+  const matchedFixture = liveMarket ? apiFixtures.find(f => f.id === LIVE_FIXTURE_ID) ?? null : null
+  const phase = liveMarket ? matchPhase(liveMarket, matchedFixture) : null
+  // The currently-tracked match might be pre-match or just-seeded — nothing
+  // to replay yet. The proof for the cold state comes from whichever seeded
+  // match most recently finished, which may be a different address entirely.
+  const replay = phase !== 'live' ? await getReplayMatch() : null
+
   const rows: Row[] = []
 
   if (liveMarket) {
-    const matchedFixture = apiFixtures.find(f => f.id === LIVE_FIXTURE_ID)
     const syntheticFixture: Fixture = matchedFixture ?? {
       id: LIVE_FIXTURE_ID,
       homeTeam: liveMarket.homeTeam,
@@ -129,15 +153,19 @@ async function MatchList() {
         })}
       </div>
 
-      {liveMarket?.status === MarketStatus.Open && (
+      {phase === 'live' ? (
         <div className="mt-4">
           <AgentActivity
-            matchAddress={liveMarket.address}
-            parentMatchId={liveMarket.marketId}
+            matchAddress={liveMarket!.address}
+            parentMatchId={liveMarket!.marketId}
             initialWindows={liveWindows}
           />
         </div>
-      )}
+      ) : replay ? (
+        <div className="mt-4">
+          <FeaturedReplay market={replay.market} windows={replay.windows} />
+        </div>
+      ) : null}
     </>
   )
 }
@@ -152,9 +180,12 @@ export default function Home() {
         <PlatformStats />
       </Suspense>
 
-      <div className="mb-6">
-        <h1 className="text-xl font-bold text-white">Today's matches</h1>
-        <p className="text-zinc-500 text-sm mt-0.5">Goal goes in, payout goes out — automatically, on-chain.</p>
+      <div className="mb-6 flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-bold text-white">Today's matches</h1>
+          <p className="text-zinc-500 text-sm mt-0.5">Goal goes in, payout goes out — automatically, on-chain.</p>
+        </div>
+        <FixturesPanel />
       </div>
 
       <Suspense fallback={<MatchListSkeleton />}>

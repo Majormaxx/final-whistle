@@ -15,7 +15,7 @@ type FeedEntry = {
   hash: Hash
 }
 
-const RESULT_LABEL: Record<number, string> = {
+export const RESULT_LABEL: Record<number, string> = {
   [Outcome.Home]: 'Home win',
   [Outcome.Draw]: 'Draw',
   [Outcome.Away]: 'Away win',
